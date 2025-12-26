@@ -1,0 +1,176 @@
+/// Utilitaires pour la gestion des dates
+/// Inclut la validation des jours fériés, les calculs de Pâques, etc.
+
+import 'package:intl/intl.dart';
+
+class DateUtils {
+  /// Décale la date au lundi si elle tombe un dimanche
+  static DateTime adjustIfWeekend(DateTime date) {
+    if (date.weekday == 7) {
+      // Dimanche
+      return date.add(const Duration(days: 1));
+    }
+    return date;
+  }
+
+  /// Calcule la date de Pâques pour une année donnée
+  /// Utilise l'algorithme de Butcher-Meeus
+  static DateTime calculateEaster(int year) {
+    int a = year % 19;
+    int b = year ~/ 100;
+    int c = year % 100;
+    int d = b ~/ 4;
+    int e = b % 4;
+    int f = (b + 8) ~/ 25;
+    int g = (b - f + 1) ~/ 3;
+    int h = (19 * a + b - d - g + 15) % 30;
+    int i = c ~/ 4;
+    int k = c % 4;
+    int l = (32 + 2 * e + 2 * i - h - k) % 7;
+    int m = (a + 11 * h + 22 * l) ~/ 451;
+    int month = (h + l - 7 * m + 114) ~/ 31;
+    int day = ((h + l - 7 * m + 114) % 31) + 1;
+    return DateTime(year, month, day);
+  }
+
+  /// Retourne tous les jours fériés en France pour une année donnée
+  static Map<String, DateTime> getHolidaysForYear(int year) {
+    final holidays = <String, DateTime>{
+      "Jour de l'an": DateTime(year, 1, 1),
+      "Résurrection": DateTime(year, 3, 29),
+      "Fête du travail": DateTime(year, 5, 1),
+      "Fête nationale": DateTime(year, 6, 26),
+      "Assomption": DateTime(year, 8, 15),
+      "Toussaint": DateTime(year, 11, 1),
+      "Noël": DateTime(year, 12, 25),
+      "Saint Sylvestre": DateTime(year, 12, 31),
+    };
+
+    // Calcul des jours fériés variables basés sur Pâques
+    final easter = calculateEaster(year);
+    holidays.addAll({
+      "Pâques": easter,
+      "Lundi de Pâques": easter.add(const Duration(days: 1)),
+      "Ascension": easter.add(const Duration(days: 39)),
+      "Lundi de Pentecôte": easter.add(const Duration(days: 50)),
+    });
+
+    return holidays;
+  }
+
+  /// Vérifie si une date est un jour férié
+  static bool isHoliday(DateTime date) {
+    final holidays = getHolidaysForYear(date.year);
+    for (final holiday in holidays.values) {
+      if (date.year == holiday.year &&
+          date.month == holiday.month &&
+          date.day == holiday.day) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /// Retourne le nombre de jours ouvrables (hors weekends et jours fériés) entre deux dates
+  static int getWorkingDaysBetween(DateTime start, DateTime end) {
+    int count = 0;
+    DateTime current = start;
+
+    while (current.isBefore(end) || current.isAtSameMomentAs(end)) {
+      // Vérifier si c'est un jour ouvrable (lun-ven) et pas un jour férié
+      if (current.weekday >= 1 && current.weekday <= 5 && !isHoliday(current)) {
+        count++;
+      }
+      current = current.add(const Duration(days: 1));
+    }
+
+    return count;
+  }
+
+  /// Formatte une date en format lisible français
+  static String formatDateFr(DateTime date) {
+    final formatter = DateFormat('dd MMMM yyyy', 'fr_FR');
+    return formatter.format(date);
+  }
+
+  /// Formatte une date en format court français (JJ/MM/YYYY)
+  static String formatDateFrShort(DateTime date) {
+    final formatter = DateFormat('dd/MM/yyyy', 'fr_FR');
+    return formatter.format(date);
+  }
+
+  /// Obtient le jour de la semaine en français
+  static String getDayNameFr(DateTime date) {
+    const days = [
+      'Lundi',
+      'Mardi',
+      'Mercredi',
+      'Jeudi',
+      'Vendredi',
+      'Samedi',
+      'Dimanche',
+    ];
+    return days[date.weekday - 1];
+  }
+
+  /// Génère les dates de planning selon la fréquence
+  /// fréquence = 0: Une seule fois → 1 date
+  /// fréquence = 1: Chaque mois → 12 dates (0, 1, 2, ..., 11 mois)
+  /// fréquence = 2: Tous les 2 mois → 6 dates (0, 2, 4, 6, 8, 10 mois)
+  /// fréquence = 3: Tous les 3 mois → 4 dates (0, 3, 6, 9 mois)
+  static List<DateTime> planningPerYear(DateTime startDate, int frequency) {
+    final dates = <DateTime>[];
+
+    // Cas spécial: une seule fois
+    if (frequency == 0) {
+      var singleDate = adjustIfWeekend(startDate);
+      final holidays = getHolidaysForYear(singleDate.year);
+
+      // Décaler si jour férié
+      while (holidays.values.any(
+        (h) =>
+            h.year == singleDate.year &&
+            h.month == singleDate.month &&
+            h.day == singleDate.day,
+      )) {
+        singleDate = singleDate.add(const Duration(days: 1));
+      }
+
+      dates.add(singleDate);
+    } else {
+      // Cas normal: générer une date tous les N mois pendant 12 mois
+      for (int i = 0; i < (12 ~/ frequency); i++) {
+        var plannedDate = _addMonths(startDate, i * frequency);
+        plannedDate = adjustIfWeekend(plannedDate);
+
+        // Vérifier si jour férié et décaler si nécessaire
+        final holidays = getHolidaysForYear(plannedDate.year);
+        while (holidays.values.any(
+          (h) =>
+              h.year == plannedDate.year &&
+              h.month == plannedDate.month &&
+              h.day == plannedDate.day,
+        )) {
+          plannedDate = plannedDate.add(const Duration(days: 1));
+        }
+
+        dates.add(plannedDate);
+      }
+    }
+
+    return dates;
+  }
+
+  /// Ajoute un nombre de mois à une date
+  static DateTime _addMonths(DateTime date, int months) {
+    final month = date.month - 1 + months;
+    final year = date.year + (month ~/ 12);
+    final newMonth = (month % 12) + 1;
+
+    // Gérer le dernier jour du mois
+    final daysInMonth = DateTime(year, newMonth + 1, 0).day;
+    final day = date.day > daysInMonth ? daysInMonth : date.day;
+
+    return DateTime(year, newMonth, day);
+  }
+}
