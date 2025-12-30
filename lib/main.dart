@@ -122,6 +122,7 @@ class _MyAppState extends State<MyApp> {
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
+        locale: const Locale('fr', 'FR'),
         home: _isConfigured
             ? Consumer<AuthRepository>(
                 builder: (context, authRepository, _) {

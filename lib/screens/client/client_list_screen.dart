@@ -27,16 +27,6 @@ class _ClientListScreenState extends State<ClientListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Gestion des clients'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            tooltip: 'Ajouter un client',
-            onPressed: () => _showAddClientDialog(context),
-          ),
-        ],
-      ),
       body: Consumer<ClientRepository>(
         builder: (context, repository, _) {
           // État de chargement

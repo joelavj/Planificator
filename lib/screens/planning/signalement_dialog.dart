@@ -131,6 +131,25 @@ class _SignalementDialogState extends State<SignalementDialog> {
       initialDate: DateHelper.parseAny(_dateCtrl.text),
       firstDate: DateTime(2020),
       lastDate: DateTime(2099),
+      locale: const Locale('fr', 'FR'),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: Colors.blue[700]!,
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: Colors.black87,
+            ),
+            dialogTheme: DialogThemeData(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
     if (picked != null) {
       setState(() => _dateCtrl.text = DateHelper.format(picked));

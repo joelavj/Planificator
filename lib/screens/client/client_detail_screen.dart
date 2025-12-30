@@ -456,7 +456,6 @@ class _ClientDetailScreenState extends State<ClientDetailScreen> {
   }
 
   void _navigateToContrats(BuildContext context, int clientId) {
-    context.read<ContratRepository>().loadContratsForClient(clientId);
     Navigator.of(context).pushNamed('/contrats');
   }
 
