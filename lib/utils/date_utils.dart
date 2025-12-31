@@ -4,7 +4,34 @@
 import 'package:intl/intl.dart';
 
 class DateUtils {
-  /// Décale la date au lundi si elle tombe un dimanche
+  /// Décale la date au lundi si elle tombe un dimanche, puis vérifie les jours fériés
+  static DateTime adjustIfWeekendAndHoliday(DateTime date) {
+    // Étape 1: Décaler si dimanche
+    DateTime adjusted = date;
+    if (adjusted.weekday == 7) {
+      // Dimanche → lundi
+      adjusted = adjusted.add(const Duration(days: 1));
+    }
+
+    // Étape 2: Vérifier si jour férié et décaler jusqu'à trouver un jour ouvrable
+    final holidays = getHolidaysForYear(adjusted.year);
+    while (holidays.values.any(
+      (h) =>
+          h.year == adjusted.year &&
+          h.month == adjusted.month &&
+          h.day == adjusted.day,
+    )) {
+      adjusted = adjusted.add(const Duration(days: 1));
+      // Vérifier à nouveau si dimanche après décalage
+      if (adjusted.weekday == 7) {
+        adjusted = adjusted.add(const Duration(days: 1));
+      }
+    }
+
+    return adjusted;
+  }
+
+  /// Décale la date au lundi si elle tombe un dimanche (simple)
   static DateTime adjustIfWeekend(DateTime date) {
     if (date.weekday == 7) {
       // Dimanche
@@ -33,17 +60,15 @@ class DateUtils {
     return DateTime(year, month, day);
   }
 
-  /// Retourne tous les jours fériés en France pour une année donnée
+  /// Retourne tous les jours fériés à Madagascar pour une année donnée
   static Map<String, DateTime> getHolidaysForYear(int year) {
     final holidays = <String, DateTime>{
+      // Jours fériés fixes à Madagascar
       "Jour de l'an": DateTime(year, 1, 1),
-      "Résurrection": DateTime(year, 3, 29),
-      "Fête du travail": DateTime(year, 5, 1),
-      "Fête nationale": DateTime(year, 6, 26),
+      "Fête nationale": DateTime(year, 6, 26), // Indépendance Madagascar
       "Assomption": DateTime(year, 8, 15),
       "Toussaint": DateTime(year, 11, 1),
       "Noël": DateTime(year, 12, 25),
-      "Saint Sylvestre": DateTime(year, 12, 31),
     };
 
     // Calcul des jours fériés variables basés sur Pâques
@@ -202,23 +227,8 @@ class DateUtils {
 
     while (currentDate.isBefore(dateFin) ||
         currentDate.isAtSameMomentAs(dateFin)) {
-      // Ajuster si weekend (dimanche)
-      var plannedDate = adjustIfWeekend(currentDate);
-
-      // Vérifier si jour férié et décaler si nécessaire
-      final holidays = getHolidaysForYear(plannedDate.year);
-      while (holidays.values.any(
-        (h) =>
-            h.year == plannedDate.year &&
-            h.month == plannedDate.month &&
-            h.day == plannedDate.day,
-      )) {
-        plannedDate = plannedDate.add(const Duration(days: 1));
-        // Vérifier à nouveau le weekend après le décalage
-        if (plannedDate.weekday == 7) {
-          plannedDate = plannedDate.add(const Duration(days: 1));
-        }
-      }
+      // Ajuster si weekend (dimanche) ET/OU jour férié
+      var plannedDate = adjustIfWeekendAndHoliday(currentDate);
 
       dates.add(plannedDate);
 
