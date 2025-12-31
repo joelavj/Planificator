@@ -25,9 +25,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final List<String> _pageTitles = [
     'Accueil',
-    'Planning',
-    'Clients',
     'Contrats',
+    'Clients',
+    'Planning',
     'Factures',
     'Historique',
     'À propos',
@@ -37,10 +37,9 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    // Load initial data
-    // WidgetsBinding.instance.addPostFrameCallback((_) {
-    //   Additional initialization can be added here
-    // });
+    //WidgetsBinding.instance.addPostFrameCallback((_) {
+    //  logger.i('🏠 HomeScreen mounted with initial tab index $_selectedIndex');
+    //});
   }
 
   @override
@@ -65,9 +64,9 @@ class _HomeScreenState extends State<HomeScreen> {
           index: _selectedIndex,
           children: const [
             _DashboardTab(),
-            PlanningScreen(),
-            ClientListScreen(),
             ContratScreen(),
+            ClientListScreen(),
+            PlanningScreen(),
             FactureListScreen(),
             HistoriqueScreen(),
             AboutScreen(),
@@ -183,9 +182,13 @@ class _DashboardTabState extends State<_DashboardTab> {
                                 .map(
                                   (data) => {
                                     'date': _formatDate(data['date']),
-                                    'nom': _convertToString(data['traitement']),
-                                    'etat': _convertToString(data['etat']),
-                                    'axe': _convertToString(data['axe']),
+                                    'nom': _convertToString(
+                                      data['traitement'] ?? '',
+                                    ),
+                                    'etat': _convertToString(
+                                      data['etat'] ?? '',
+                                    ),
+                                    'axe': _convertToString(data['axe'] ?? ''),
                                   },
                                 )
                                 .toList(),
@@ -244,9 +247,13 @@ class _DashboardTabState extends State<_DashboardTab> {
                                 .map(
                                   (data) => {
                                     'date': _formatDate(data['date']),
-                                    'nom': _convertToString(data['traitement']),
-                                    'etat': _convertToString(data['etat']),
-                                    'axe': _convertToString(data['axe']),
+                                    'nom': _convertToString(
+                                      data['traitement'] ?? '',
+                                    ),
+                                    'etat': _convertToString(
+                                      data['etat'] ?? '',
+                                    ),
+                                    'axe': _convertToString(data['axe'] ?? ''),
                                   },
                                 )
                                 .toList(),
@@ -329,7 +336,7 @@ class _DashboardTabState extends State<_DashboardTab> {
               : Colors.black;
 
           return DataRow(
-            color: MaterialStateProperty.all(bgColor),
+            color: WidgetStatePropertyAll(bgColor),
             cells: [
               DataCell(
                 Text(
