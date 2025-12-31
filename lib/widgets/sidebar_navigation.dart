@@ -61,8 +61,8 @@ class SidebarNavigation extends StatelessWidget {
                   ),
                   _buildNavItem(
                     context,
-                    icon: Icons.calendar_today,
-                    label: 'Planning',
+                    icon: Icons.description,
+                    label: 'Contrats',
                     index: 1,
                   ),
                   _buildNavItem(
@@ -73,8 +73,8 @@ class SidebarNavigation extends StatelessWidget {
                   ),
                   _buildNavItem(
                     context,
-                    icon: Icons.description,
-                    label: 'Contrats',
+                    icon: Icons.calendar_today,
+                    label: 'Planning',
                     index: 3,
                   ),
                   _buildNavItem(
