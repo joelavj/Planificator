@@ -34,18 +34,14 @@ class _FactureListScreenState extends State<FactureListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Gestion des factures'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              if (widget.clientId != null) {
-                _factureRepository.loadFacturesForClient(widget.clientId!);
-              }
-            },
-          ),
-        ],
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          if (widget.clientId != null) {
+            _factureRepository.loadFacturesForClient(widget.clientId!);
+          }
+        },
+        tooltip: 'Actualiser',
+        child: const Icon(Icons.refresh),
       ),
       body: Consumer<FactureRepository>(
         builder: (context, repository, _) {
