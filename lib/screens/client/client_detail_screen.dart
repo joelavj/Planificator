@@ -8,8 +8,7 @@ import '../../core/theme.dart';
 class ClientDetailScreen extends StatefulWidget {
   final int clientId;
 
-  const ClientDetailScreen({Key? key, required this.clientId})
-    : super(key: key);
+  const ClientDetailScreen({super.key, required this.clientId});
 
   @override
   State<ClientDetailScreen> createState() => _ClientDetailScreenState();
