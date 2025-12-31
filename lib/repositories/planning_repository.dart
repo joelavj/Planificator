@@ -336,8 +336,6 @@ class PlanningRepository extends ChangeNotifier {
     }
   }
 
-  /// ✅ NOUVEAU : Logique complète save_planning avec création de details + factures
-  /// Conforme à main.py save_planning() (lignes 502-650)
   Future<bool> savePlanningComplete({
     required int traitement_id,
     required DateTime debut,
