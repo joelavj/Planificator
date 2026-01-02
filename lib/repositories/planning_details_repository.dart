@@ -142,14 +142,15 @@ class PlanningDetailsRepository extends ChangeNotifier {
         '🔍 Chargement COMPLET traitements du mois $currentMonth/$currentYear',
       );
 
-      // ✅ Requête COMPLÈTE: récupère typeTraitement + nom + prenom + axe
+      // ✅ Requête COMPLÈTE: récupère typeTraitement + categorieTraitement + nom + prenom + axe
       final results = await _db.query(
         '''SELECT 
              pd.planning_detail_id,
              DATE_FORMAT(pd.date_planification, '%Y-%m-%d') as date,
              CONCAT(tt.typeTraitement, ' pour ', c.prenom, ' ', c.nom) as traitement,
              pd.statut as etat,
-             c.axe
+             c.axe,
+             tt.categorieTraitement
            FROM PlanningDetails pd
            INNER JOIN Planning p ON pd.planning_id = p.planning_id
            INNER JOIN Traitement t ON p.traitement_id = t.traitement_id
@@ -206,14 +207,15 @@ class PlanningDetailsRepository extends ChangeNotifier {
 
       logger.i('🔍 Chargement COMPLET traitements à venir (après $todayStr)');
 
-      // ✅ Requête COMPLÈTE: récupère typeTraitement + nom + prenom + axe
+      // ✅ Requête COMPLÈTE: récupère typeTraitement + categorieTraitement + nom + prenom + axe
       final results = await _db.query(
         '''SELECT 
              pd.planning_detail_id,
              DATE_FORMAT(pd.date_planification, '%Y-%m-%d') as date,
              CONCAT(tt.typeTraitement, ' pour ', c.prenom, ' ', c.nom) as traitement,
              pd.statut as etat,
-             c.axe
+             c.axe,
+             tt.categorieTraitement
            FROM PlanningDetails pd
            INNER JOIN Planning p ON pd.planning_id = p.planning_id
            INNER JOIN Traitement t ON p.traitement_id = t.traitement_id
