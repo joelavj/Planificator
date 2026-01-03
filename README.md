@@ -1,4 +1,8 @@
 <p align="center">
+  <img src="https://github.com/josoavj/PlanificatorFinal/blob/main/assets/logo/Logo-Planificator.ico" alt="LevelMind Logo" width="150"/>
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/Flutter-%3E%3D3.1.0-blue?style=flat-square" alt="Flutter Version">
   <img src="https://img.shields.io/badge/Dart-%3E%3D3.1.0-blue?style=flat-square" alt="Dart Version">
   <img src="https://img.shields.io/badge/MySQL-8.0-orange?style=flat-square" alt="MySQL Version">
