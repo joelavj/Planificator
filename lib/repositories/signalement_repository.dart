@@ -100,7 +100,7 @@ class SignalementRepository extends ChangeNotifier {
       const sql = '''
         UPDATE PlanningDetails 
         SET date_planification = ?
-        WHERE id_planning_details = ?
+        WHERE planning_detail_id = ?
       ''';
 
       await _db.execute(sql, [
@@ -121,17 +121,6 @@ class SignalementRepository extends ChangeNotifier {
     }
   }
 
-  /// ✅ LOGIQUE CLÉE: Décaler TOUTES les dates futures du même écart
-  /// Conforme à Kivy: decaler.active = modifier TOUTES les dates futures
-  ///
-  /// Le point clé: on ne change PAS la redondance, on décale juste les dates
-  /// Exemple: Si on décale le 5 Jan au 15 Jan (+10j), les 5 Fév, 5 Mar... deviennent 15 Fév, 15 Mar...
-  ///
-  /// Paramètres:
-  /// - planningId: ID du planning principal
-  /// - planningDetailsId: ID du planning detail qu'on vient de modifier
-  /// - ancienneDateModifiee: la date AVANT modification (ex: 5 Jan)
-  /// - nouvelleDateModifiee: la date APRÈS modification (ex: 15 Jan)
   Future<bool> modifierRedondance({
     required int planningId,
     required int planningDetailsId,
@@ -143,11 +132,12 @@ class SignalementRepository extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // ✅ 1. Calculer l'écart de décalage
-      final ecartDays = nouvelleDateModifiee
-          .difference(ancienneDateModifiee)
-          .inDays;
-      logger.i('🔄 Décalage des dates futures de $ecartDays jours');
+      // ✅ 1. Calculer l'écart de décalage EN MOIS (conforme Kivy relativedelta)
+      final ecartMois = _calculateMonthsDifference(
+        ancienneDateModifiee,
+        nouvelleDateModifiee,
+      );
+      logger.i('🔄 Décalage des dates futures de $ecartMois mois');
 
       // ✅ 2. Récupérer tous les details de ce planning
       const getAllDetailsSQL = '''
@@ -169,7 +159,7 @@ class SignalementRepository extends ChangeNotifier {
         }
       }
 
-      // ✅ 4. Décaler TOUTES les dates à partir de currentIndex+1 du même écart
+      // ✅ 4. Décaler TOUTES les dates à partir de currentIndex+1 du même écart EN MOIS
       const updateDetailsSQL = '''
         UPDATE PlanningDetails 
         SET date_planification = ?
@@ -180,8 +170,8 @@ class SignalementRepository extends ChangeNotifier {
         final oldDate = DateHelper.toDateTime(
           allDetails[i]['date_planification'],
         );
-        // Ajouter l'écart à la date existante
-        final newDate = oldDate.add(Duration(days: ecartDays));
+        // 🔧 CORRECTION: Ajouter l'écart en MOIS (pas en jours)
+        final newDate = _addMonthsToDate(oldDate, ecartMois);
 
         await _db.execute(updateDetailsSQL, [
           DateHelper.toDbFormat(newDate),
@@ -189,7 +179,7 @@ class SignalementRepository extends ChangeNotifier {
         ]);
 
         logger.i(
-          '  📅 Detail ${allDetails[i]['planning_detail_id']}: ${DateHelper.format(oldDate)} → ${DateHelper.format(newDate)}',
+          '  📅 Detail ${allDetails[i]['planning_detail_id']}: ${DateHelper.format(oldDate)} → ${DateHelper.format(newDate)} (écart: $ecartMois mois)',
         );
       }
 
@@ -320,5 +310,61 @@ class SignalementRepository extends ChangeNotifier {
       logger.e('❌ Erreur mettre à jour signalement: $e');
       return false;
     }
+  }
+
+  /// 🔧 HELPER: Calcule la différence en MOIS entre deux dates (conforme Kivy relativedelta)
+  /// Exemple: 01/01/2026 → 01/03/2026 = 2 mois (pas 59 jours)
+  int _calculateMonthsDifference(DateTime dateStart, DateTime dateEnd) {
+    int mois = 0;
+    DateTime current = dateStart;
+
+    if (dateEnd.isAfter(dateStart)) {
+      // Cas positif (décalage)
+      while (current.month != dateEnd.month || current.year != dateEnd.year) {
+        current = DateTime(current.year, current.month + 1, current.day);
+        mois++;
+
+        // Sécurité: limiter à 12 mois pour éviter les boucles infinies
+        if (mois > 120) break;
+      }
+    } else if (dateStart.isAfter(dateEnd)) {
+      // Cas négatif (avancement)
+      while (current.month != dateEnd.month || current.year != dateEnd.year) {
+        current = DateTime(current.year, current.month - 1, current.day);
+        mois--;
+
+        // Sécurité
+        if (mois < -120) break;
+      }
+    }
+
+    logger.i('📐 Différence mois: $dateStart → $dateEnd = $mois mois');
+    return mois;
+  }
+
+  /// 🔧 HELPER: Ajoute un nombre de mois à une date (gère les débordements)
+  /// Exemple: 01/01/2026 + 2 mois = 01/03/2026
+  DateTime _addMonthsToDate(DateTime date, int mois) {
+    int newMonth = date.month + mois;
+    int newYear = date.year;
+
+    // Gérer les débordements de mois
+    while (newMonth > 12) {
+      newMonth -= 12;
+      newYear++;
+    }
+    while (newMonth < 1) {
+      newMonth += 12;
+      newYear--;
+    }
+
+    // Gérer les jours invalides (ex: 31 février)
+    int newDay = date.day;
+    DateTime lastDayOfMonth = DateTime(newYear, newMonth + 1, 0);
+    if (newDay > lastDayOfMonth.day) {
+      newDay = lastDayOfMonth.day;
+    }
+
+    return DateTime(newYear, newMonth, newDay);
   }
 }
