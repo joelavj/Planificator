@@ -187,6 +187,17 @@ CREATE TABLE TypeTraitement (
                                 typeTraitement ENUM('Dératisation (PC)', 'Désinfection (PC)', 'Désinsectisation (PC)', 'Fumigation (PC)', 'Nettoyage industriel (NI)', 'Anti termites (AT)', 'Ramassage ordures (RO)') NOT NULL
 );
 
+-- Insertion des types de traitement prédéfinis
+INSERT INTO TypeTraitement (id_type_traitement, categorieTraitement, typeTraitement) VALUES
+(1, 'PC', 'Dératisation (PC)'),
+(2, 'PC', 'Désinfection (PC)'),
+(3, 'PC', 'Désinsectisation (PC)'),
+(4, 'PC', 'Fumigation (PC)'),
+(5, 'NI: Nettoyage Industriel', 'Nettoyage industriel (NI)'),
+(6, 'AT: Anti termites', 'Anti termites (AT)'),
+(7, 'RO: Ramassage Ordures', 'Ramassage ordures (RO)');
+
+
 
 -- Table Traitement
 CREATE TABLE Traitement (
@@ -221,11 +232,10 @@ CREATE TABLE PlanningDetails (
 );
 
 /*
-    Inutilisée pour des raisons de dépendance circulaire au niveau des deux table
-    Ajouter la clé étrangère à Planning après que PlanningDetails existes
-
-    ALTER TABLE Planning
-    ADD FOREIGN KEY (planning_detail_id) REFERENCES PlanningDetails(planning_detail_id) ON DELETE CASCADE;
+    ✅ RELATION CORRECTE:
+    - PlanningDetails.planning_id → Planning.planning_id (FK dans PlanningDetails)
+    - NE PAS ajouter de FK inverse dans Planning car cela crée une dépendance circulaire
+    - L'ordre d'insertion doit être: Planning PUIS PlanningDetails
 */
 
 -- Table Facture (Pour la facturation de chaque service effectué)
