@@ -3,10 +3,12 @@ class NumberFormatter {
   /// Parse un montant en ignorant les espaces et caractères non-numériques
   /// Retourne TOUJOURS un montant positif (les montants négatifs ne sont pas autorisés)
   /// Exemple: "50 000" → 50000, "-50 000" → 50000
+  /// Retourne 0 si le montant est vide ou invalide
   /// Utile pour les saisies utilisateur avec séparateurs
   static int parseMontant(String input) {
+    // Retourner 0 pour les montants vides ou null
     if (input.isEmpty) {
-      throw FormatException('Montant vide');
+      return 0;
     }
 
     // Supprimer tous les espaces
@@ -17,7 +19,7 @@ class NumberFormatter {
     final numeric = cleaned.replaceAll(RegExp(r'[^\d]'), '');
 
     if (numeric.isEmpty) {
-      throw FormatException('Aucun chiffre trouvé dans: $input');
+      return 0;
     }
 
     return int.parse(numeric);
