@@ -7,10 +7,12 @@ class Contrat {
   final DateTime dateContrat;
   final DateTime dateDebut;
   final DateTime? dateFin; // Nullable si durée indéterminée
-  final String statutContrat; // 'Actif', 'Inactif', 'Terminé'
+  final String statutContrat; // 'Actif', 'Inactif', 'Terminé', 'Résilié'
   final int dureeContrat; // Durée en mois
   final int? duree; // Durée restante en mois (null si indéterminée)
   final String categorie; // Catégorie du contrat
+  final DateTime? dateAbrogation; // Date de résiliation/abrogation
+  final String? motifAbrogation; // Raison de l'abrogation
 
   Contrat({
     required this.contratId,
@@ -23,6 +25,8 @@ class Contrat {
     required this.dureeContrat,
     this.duree,
     required this.categorie,
+    this.dateAbrogation,
+    this.motifAbrogation,
   });
 
   factory Contrat.fromJson(Map<String, dynamic> json) {
@@ -45,6 +49,12 @@ class Contrat {
           ? null
           : json['duree'] as int?,
       categorie: json['categorie'] as String? ?? '',
+      dateAbrogation:
+          json['date_abrogation'] is String &&
+              (json['date_abrogation'] as String).isNotEmpty
+          ? DateTime.parse(json['date_abrogation'] as String)
+          : null,
+      motifAbrogation: json['motif_abrogation'] as String?,
     );
   }
 
@@ -92,6 +102,8 @@ class Contrat {
       dureeContrat: _parseDuree(map['duree_contrat']) ?? 0,
       duree: _parseDuree(map['duree']),
       categorie: map['categorie'] as String? ?? '',
+      dateAbrogation: _parseDate(map['date_abrogation']),
+      motifAbrogation: map['motif_abrogation'] as String?,
     );
   }
 
@@ -106,6 +118,8 @@ class Contrat {
     'duree_contrat': dureeContrat,
     'duree': duree,
     'categorie': categorie,
+    'date_abrogation': dateAbrogation?.toIso8601String(),
+    'motif_abrogation': motifAbrogation,
   };
 
   /// Vérifie si le contrat est actif
@@ -129,6 +143,8 @@ class Contrat {
     int? dureeContrat,
     int? duree,
     String? categorie,
+    DateTime? dateAbrogation,
+    String? motifAbrogation,
   }) {
     return Contrat(
       contratId: contratId ?? this.contratId,
@@ -141,6 +157,8 @@ class Contrat {
       dureeContrat: dureeContrat ?? this.dureeContrat,
       duree: duree ?? this.duree,
       categorie: categorie ?? this.categorie,
+      dateAbrogation: dateAbrogation ?? this.dateAbrogation,
+      motifAbrogation: motifAbrogation ?? this.motifAbrogation,
     );
   }
 

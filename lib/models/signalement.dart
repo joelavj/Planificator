@@ -31,7 +31,7 @@ class Signalement {
       type: _toStr(json['type'], 'décalage'),
       dateSignalement: json['date_signalement'] != null
           ? DateTime.parse(json['date_signalement'].toString())
-          : DateTime.now(),
+          : null,
     );
   }
 
