@@ -49,15 +49,22 @@ CREATE INDEX idx_historique_signalement ON Historique(signalement_id);
 CREATE INDEX idx_historique_prix_facture ON Historique_prix(facture_id);
 
 -- =====================================================
--- PARTIE 2: ACTIVER LES FOREIGN KEYS ACTUELLEMENT COMMENTÉES
+-- PARTIE 2: CORRECTION DE LA CONTRAINTE FOREIGN KEY
 -- =====================================================
 
--- ⚠️ ATTENTION: Planning → PlanningDetails (dépendance circulaire résolue)
--- Cette FK était commentée car créée avant l'existence de PlanningDetails
--- Vérifiez d'abord qu'il n'y a pas de données incohérentes
+-- ⚠️ IMPORTANTE: Supprimer la mauvaise contrainte circulaire (Planning.planning_id → PlanningDetails)
+-- Cette contrainte créait une dépendance circulaire car:
+-- - Planning crée planning_id (PK)
+-- - PlanningDetails référence Planning.planning_id (FK correcte)
+-- - Mais on tentait d'ajouter Planning.planning_id → PlanningDetails (FK inverse = ERREUR !)
+
+-- Vérifier si la contrainte existe avant de la supprimer
 ALTER TABLE Planning
-ADD CONSTRAINT fk_planning_planning_details 
-FOREIGN KEY (planning_id) REFERENCES PlanningDetails(planning_id) ON DELETE CASCADE;
+DROP FOREIGN KEY IF EXISTS fk_planning_planning_details;
+
+-- ✅ La relation correcte existe déjà dans PlanningDetails:
+-- PlanningDetails.planning_id → Planning.planning_id (ON DELETE CASCADE)
+-- Aucune autre FK ne doit être ajoutée entre Planning et PlanningDetails
 
 -- =====================================================
 -- PARTIE 3: CONSOLIDATION DES ENUMS DUPLIQUÉS
@@ -164,3 +171,22 @@ WHERE TABLE_NAME = 'PlanningDetails' AND COLUMN_NAME = 'statut';
 
 -- Note: Cette migration permet de marquer les plannings comme 'Classé sans suite'
 -- quand un contrat est résilié ou abrogé
+-- =====================================================
+-- PARTIE 5: ABROGATION/RÉSILIATION DE CONTRATS
+-- =====================================================
+-- ✅ Ajouter une colonne date_abrogation pour tracker la date de résiliation
+ALTER TABLE Contrat 
+ADD COLUMN IF NOT EXISTS date_abrogation DATE NULL COMMENT 'Date de résiliation/abrogation du contrat';
+
+-- ✅ Ajouter une colonne motif_abrogation pour la raison
+ALTER TABLE Contrat 
+ADD COLUMN IF NOT EXISTS motif_abrogation VARCHAR(255) NULL COMMENT 'Motif de la résiliation/abrogation';
+
+-- ✅ Index pour accélérer les requêtes sur les contrats résiliés
+CREATE INDEX IF NOT EXISTS idx_contrat_statut_abrogation ON Contrat(statut_contrat, date_abrogation);
+
+-- Note: Quand un contrat est abrogé:
+-- 1. Le statut_contrat passe à 'Résilié'
+-- 2. date_abrogation est définie à la date d'abrogation
+-- 3. Tous les PlanningDetails futurs passent à 'Classé sans suite'
+-- 4. Les PlanningDetails avec date_planification > date_abrogation sont supprimés ou marqués
