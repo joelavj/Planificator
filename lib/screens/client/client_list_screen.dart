@@ -60,7 +60,7 @@ class _ClientListScreenState extends State<ClientListScreen> {
               // Liste des clients
               Expanded(
                 child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  padding: const EdgeInsets.symmetric(vertical: 4),
                   itemCount: repository.clients.length,
                   itemBuilder: (context, index) {
                     final client = repository.clients[index];
@@ -159,7 +159,7 @@ class _ClientListScreenState extends State<ClientListScreen> {
     Client client,
   ) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -178,7 +178,7 @@ class _ClientListScreenState extends State<ClientListScreen> {
                 ),
               ],
             ),
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -187,7 +187,7 @@ class _ClientListScreenState extends State<ClientListScreen> {
                   children: [
                     // Avatar avec gradient
                     _buildAvatar(client),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 12),
                     // Informations client
                     Expanded(
                       child: Column(
@@ -211,7 +211,7 @@ class _ClientListScreenState extends State<ClientListScreen> {
                               _buildCategoryBadge(client.categorie),
                             ],
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 4),
                           // Email
                           if (client.email.isNotEmpty)
                             Row(
