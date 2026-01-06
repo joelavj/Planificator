@@ -17,6 +17,31 @@ class FactureRepository extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
+  /// ✅ Charge les factures d'un contrat
+  Future<List<Facture>> loadFacturesForContrat(int contratId) async {
+    try {
+      const sql = '''
+        SELECT DISTINCT f.*
+        FROM Facture f
+        INNER JOIN PlanningDetails pd ON f.planning_detail_id = pd.planning_detail_id
+        INNER JOIN Planning p ON pd.planning_id = p.planning_id
+        INNER JOIN Traitement t ON p.traitement_id = t.traitement_id
+        WHERE t.contrat_id = ?
+        ORDER BY f.date_traitement DESC
+      ''';
+
+      final rows = await _db.query(sql, [contratId]);
+      final factures = rows.map((row) => Facture.fromMap(row)).toList();
+      logger.i(
+        '✅ ${factures.length} factures chargées pour contrat $contratId',
+      );
+      return factures;
+    } catch (e) {
+      logger.e('Erreur chargement factures contrat: $e');
+      return [];
+    }
+  }
+
   /// Charge les factures d'un client avec tous les détails jointes
   /// Conforme à logique Kivy pour affichage complet
   Future<void> loadFacturesForClient(int clientId) async {
@@ -407,9 +432,9 @@ class FactureRepository extends ChangeNotifier {
     required int planningDetailId,
     required String referenceFacture,
     required int montant,
-    required String mode,
+    String? mode, // ✅ Mode peut être null (à définir plus tard)
     required String etat,
-    required String axe,
+    String? axe, // ✅ Axe peut être null (à définir plus tard)
     required DateTime dateTraitement,
   }) async {
     _isLoading = true;
@@ -559,5 +584,213 @@ class FactureRepository extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  /// ✅ REPAIR FUNCTION: Régénère les factures pour un contrat
+  /// Utile pour corriger les factures manquantes ou erronées
+  ///
+  /// Étapes:
+  /// 1. Récupère l'axe du client et le montant automatiquement
+  /// 2. Récupère tous les PlanningDetails du contrat
+  /// 3. Supprime les factures existantes (OPTIONAL)
+  /// 4. Crée de nouvelles factures pour chaque PlanningDetail
+  Future<int> regenerateFacturesForContrat({
+    required int contratId,
+    bool deleteExisting = false,
+  }) async {
+    // DEPRECATED: Use regenerateFacturesForTraitement instead
+    return 0;
+  }
+
+  /// ✅ REPAIR FUNCTION: Régénère les factures pour un traitement spécifique
+  /// Utile pour corriger les factures manquantes ou erronées d'un traitement
+  ///
+  /// Étapes:
+  /// 1. Crée les PlanningDetails manquants si besoin
+  /// 2. Crée une facture pour chaque PlanningDetail manquant
+  /// 3. Génère les références avec le montant demandé
+  Future<int> regenerateFacturesForTraitement({
+    required int traitementId,
+    required int montant,
+    required String referencePrefix,
+    bool deleteExisting = false,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      logger.i('🔧 REPAIR: Planning + Factures pour traitement $traitementId');
+      logger.i('   💰 Montant: $montant Ar');
+      logger.i('   📑 Référence: $referencePrefix');
+
+      // 1. Récupérer l'axe et le Planning
+      const sqlGetAxe = '''
+        SELECT DISTINCT cl.axe
+        FROM Traitement t
+        INNER JOIN Contrat c ON t.contrat_id = c.contrat_id
+        INNER JOIN Client cl ON c.client_id = cl.client_id
+        WHERE t.traitement_id = ?
+      ''';
+
+      final axeResult = await _db.query(sqlGetAxe, [traitementId]);
+      if (axeResult.isEmpty) throw Exception('Traitement non trouvé');
+      final axe = axeResult[0]['axe'] as String;
+
+      const sqlGetPlanning = '''
+        SELECT p.planning_id, p.date_debut_planification, p.duree_traitement, p.redondance
+        FROM Planning p WHERE p.traitement_id = ? LIMIT 1
+      ''';
+
+      final planningResult = await _db.query(sqlGetPlanning, [traitementId]);
+      if (planningResult.isEmpty) throw Exception('Planning non trouvé');
+
+      final planningId = planningResult[0]['planning_id'] as int;
+      final dureeTraitement = planningResult[0]['duree_traitement'] as int;
+      final redondance = planningResult[0]['redondance'] as int;
+      logger.i(
+        '   📅 Planning: ID=$planningId, Durée=$dureeTraitement, Redondance=$redondance',
+      );
+
+      // 2. Créer les PlanningDetails manquants
+      const sqlCountDetails =
+          'SELECT COUNT(*) as count FROM PlanningDetails WHERE planning_id = ?';
+      final countResult = await _db.query(sqlCountDetails, [planningId]);
+      final existingCount = (countResult[0]['count'] as int?) ?? 0;
+
+      int planningDetailsCreated = 0;
+      if (existingCount == 0) {
+        final dateDebut = DateTime.parse(
+          planningResult[0]['date_debut_planification'] as String,
+        );
+        logger.i('   🔄 Génération des dates...');
+
+        final planningDates = _generatePlanningDates(
+          dateDebut: dateDebut,
+          dureeTraitement: dureeTraitement,
+          redondance: redondance,
+        );
+
+        logger.i('   ✅ ${planningDates.length} dates générées');
+
+        for (final date in planningDates) {
+          try {
+            const sqlInsert = '''
+              INSERT INTO PlanningDetails (planning_id, date_planification)
+              VALUES (?, ?)
+            ''';
+            await _db.execute(sqlInsert, [planningId, date.toIso8601String()]);
+            planningDetailsCreated++;
+            logger.i(
+              '   ✅ PlanningDetail créé: ${date.toIso8601String()} (ID Planning=$planningId)',
+            );
+          } catch (e) {
+            logger.e('   ❌ Erreur création PlanningDetail: $e');
+          }
+        }
+        logger.i('   🎉 $planningDetailsCreated Planning Details créés');
+      } else {
+        logger.i('   ℹ️ $existingCount Planning Details existent déjà');
+      }
+
+      // 3. Créer les factures
+      const sqlGetDetails = '''
+        SELECT DISTINCT pd.planning_detail_id, pd.date_planification
+        FROM PlanningDetails pd WHERE pd.planning_id = ? ORDER BY pd.date_planification ASC
+      ''';
+
+      final planningDetails = await _db.query(sqlGetDetails, [planningId]);
+      logger.i(
+        '   📋 Total Planning Details trouvés: ${planningDetails.length}',
+      );
+
+      if (planningDetails.isEmpty) {
+        logger.w('   ⚠️ Aucun PlanningDetail trouvé! Vérifiez la création.');
+        return 0;
+      }
+
+      int facturesCreated = 0;
+      int sequenceNumber = 1;
+
+      for (final pd in planningDetails) {
+        final pdId = pd['planning_detail_id'] as int;
+        final dateStr = pd['date_planification'] as String;
+
+        const sqlCheck =
+            'SELECT facture_id FROM Facture WHERE planning_detail_id = ?';
+        final existing = await _db.query(sqlCheck, [pdId]);
+
+        if (existing.isNotEmpty && !deleteExisting) {
+          logger.i('   ⏭️ Facture existe pour PD #$pdId');
+          continue;
+        }
+
+        final ref = '$referencePrefix-$sequenceNumber';
+        final factureId = await createFactureComplete(
+          planningDetailId: pdId,
+          referenceFacture: ref,
+          montant: montant,
+          mode: null,
+          etat: 'À venir',
+          axe: axe,
+          dateTraitement: DateTime.parse(dateStr),
+        );
+
+        if (factureId != -1) {
+          facturesCreated++;
+          logger.i('   ✅ Facture créée: $ref (PD#$pdId)');
+        }
+        sequenceNumber++;
+      }
+
+      logger.i(
+        '🎉 TERMINÉ: $planningDetailsCreated PD + $facturesCreated factures',
+      );
+      return facturesCreated;
+    } catch (e) {
+      _errorMessage = 'Erreur: $e';
+      logger.e('❌ $e');
+      return 0;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// ✅ Génère les dates de planning
+  List<DateTime> _generatePlanningDates({
+    required DateTime dateDebut,
+    required int dureeTraitement,
+    required int redondance,
+  }) {
+    final dates = <DateTime>[];
+    if (dureeTraitement <= 0) return dates;
+
+    if (redondance == 0) {
+      dates.add(dateDebut);
+      return dates;
+    }
+
+    if (redondance <= 0) return dates;
+
+    final dateFin = _addMonths(dateDebut, dureeTraitement);
+    DateTime currentDate = dateDebut;
+
+    while (currentDate.isBefore(dateFin) ||
+        currentDate.isAtSameMomentAs(dateFin)) {
+      dates.add(currentDate);
+      currentDate = _addMonths(currentDate, redondance);
+    }
+
+    return dates;
+  }
+
+  /// ✅ Ajoute des mois à une date
+  DateTime _addMonths(DateTime date, int months) {
+    var result = DateTime(date.year, date.month + months, date.day);
+    if (result.day != date.day) {
+      result = DateTime(result.year, result.month + 1, 0);
+    }
+    return result;
   }
 }
