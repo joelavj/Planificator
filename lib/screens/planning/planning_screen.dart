@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:planificator/models/facture.dart';
 import 'package:planificator/models/planning_details.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:provider/provider.dart';
@@ -398,49 +397,103 @@ class _PlanningDetailScreenState extends State<_PlanningDetailScreen> {
 
       logger.i('✅ PlanningDetails créé: ${planningDetail.planningDetailId}');
 
-      // Créer une Facture par défaut si elle n'existe pas
-      final facture = Facture(
-        factureId: 0,
-        planningDetailsId: planningDetail.planningDetailId,
-        montant: 0,
-        etat: 'Non payée',
-        axe: widget.treatment['axe'] ?? '',
-        dateTraitement: planningDetail.datePlanification,
-      );
-
-      // Afficher le nouveau RemarqueDialog moderne
+      // ✅ CRÉER UNE FACTURE VALIDE D'ABORD
       showDialog(
         context: context,
-        builder: (ctx) => RemarqueDialog(
-          planningDetail: planningDetail,
-          facture: facture,
-          onSaved: () async {
-            logger.i('✅ Remarque enregistrée');
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Créer Facture'),
+          content: const Text(
+            'Une facture sera créée automatiquement pour cette date',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                try {
+                  // Créer la facture
+                  final factureId = await context
+                      .read<FactureRepository>()
+                      .createFactureComplete(
+                        planningDetailId: planningDetail.planningDetailId,
+                        referenceFacture:
+                            'FAC-${DateTime.now().millisecondsSinceEpoch}',
+                        montant: 0,
+                        mode: null,
+                        etat: 'À venir',
+                        axe: widget.treatment['axe'] ?? '',
+                        dateTraitement: planningDetail.datePlanification,
+                      );
 
-            // ✅ CORRECTION: Attendre vraiment que le chargement se termine
-            if (mounted) {
-              await context
-                  .read<PlanningDetailsRepository>()
-                  .loadUpcomingTreatmentsComplete();
-            }
+                  if (factureId != -1) {
+                    logger.i('✅ Facture créée: $factureId');
 
-            // Afficher le succès
-            if (mounted) {
-              ScaffoldMessenger.of(context).clearSnackBars();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Remarque & Facture ajoutées avec succès'),
-                  backgroundColor: Colors.green,
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            }
+                    // ✅ Récupérer la vraie facture depuis la BD
+                    final factureRepo = context.read<FactureRepository>();
+                    final factures = await factureRepo
+                        .getFacturesByPlanningDetail(
+                          planningDetail.planningDetailId,
+                        );
 
-            // Fermer l'écran de détail APRÈS le rechargement confirmé
-            if (mounted) {
-              Navigator.of(context).pop();
-            }
-          },
+                    if (factures.isNotEmpty) {
+                      final facture = factures.first;
+
+                      Navigator.pop(ctx);
+
+                      // Afficher le RemarqueDialog avec la vraie facture
+                      showDialog(
+                        context: context,
+                        builder: (ctx2) => RemarqueDialog(
+                          planningDetail: planningDetail,
+                          facture: facture,
+                          onSaved: () async {
+                            logger.i('✅ Remarque enregistrée');
+
+                            if (mounted) {
+                              await context
+                                  .read<PlanningDetailsRepository>()
+                                  .loadUpcomingTreatmentsComplete();
+                            }
+
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).clearSnackBars();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Remarque & Facture ajoutées avec succès',
+                                  ),
+                                  backgroundColor: Colors.green,
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                            }
+
+                            if (mounted) {
+                              Navigator.of(context).pop();
+                            }
+                          },
+                        ),
+                      );
+                    } else {
+                      throw Exception('Erreur création facture');
+                    }
+                  } else {
+                    throw Exception('Erreur création facture');
+                  }
+                } catch (err) {
+                  logger.e('❌ Erreur: $err');
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text('❌ Erreur: $err')));
+                }
+              },
+              child: const Text('Créer Facture'),
+            ),
+          ],
         ),
       );
     } catch (e) {
@@ -531,9 +584,9 @@ class _PlanningDetailScreenState extends State<_PlanningDetailScreen> {
             // Section infos planning
             Card(
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(12),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     const Text(
                       'Informations du Planning',
@@ -542,7 +595,7 @@ class _PlanningDetailScreenState extends State<_PlanningDetailScreen> {
                         fontSize: 14,
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 8),
                     _DetailRow('Traitement', traitement),
                     _DetailRow('Date', date),
                     _DetailRow('Axe', axe),
@@ -551,53 +604,61 @@ class _PlanningDetailScreenState extends State<_PlanningDetailScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
             // Section Actions principales
             const Text(
               'Actions',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
 
-            // Bouton 1: Ajouter une Remarque
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _showRemarqueDialog,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  backgroundColor: Colors.blue,
-                ),
-                child: const Text(
-                  'Ajouter une Remarque',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+            // Boutons centré et petit
+            Center(
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  // Bouton 1: Ajouter une Remarque
+                  SizedBox(
+                    width: 150,
+                    child: ElevatedButton(
+                      onPressed: _showRemarqueDialog,
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        backgroundColor: Colors.blue,
+                      ),
+                      child: const Text(
+                        'Remarque',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
 
-            // Bouton 2: Signaler un Problème
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _showSignalementDialog,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  backgroundColor: Colors.orange,
-                ),
-                child: const Text(
-                  'Signaler un Problème',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                  // Bouton 2: Signaler un Problème
+                  SizedBox(
+                    width: 150,
+                    child: ElevatedButton(
+                      onPressed: _showSignalementDialog,
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        backgroundColor: Colors.orange,
+                      ),
+                      child: const Text(
+                        'Problème',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ),
           ],
@@ -616,12 +677,16 @@ class _DetailRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
-          Text(value),
+          Text(
+            label,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+          ),
+          const SizedBox(width: 16),
+          Text(value, style: const TextStyle(fontSize: 13)),
         ],
       ),
     );
