@@ -35,14 +35,16 @@ class PlanningDetailsRepository extends ChangeNotifier {
     String statut = 'À venir',
   }) async {
     try {
-      final result = await _db.query(
+      // ✅ Utiliser insert() au lieu de query() pour les INSERT
+      final insertId = await _db.insert(
         'INSERT INTO PlanningDetails (planning_id, date_planification, statut) VALUES (?, ?, ?)',
         [planningId, datePlanification.toIso8601String().split('T')[0], statut],
       );
 
-      if (result.isNotEmpty) {
-        int insertId = result[0]['planning_detail_id'] as int? ?? 0;
-        if (insertId == 0) return null;
+      if (insertId > 0) {
+        logger.i(
+          '✅ PlanningDetail créé: ID $insertId pour planning $planningId',
+        );
 
         return PlanningDetails(
           planningDetailId: insertId,
@@ -51,6 +53,7 @@ class PlanningDetailsRepository extends ChangeNotifier {
           statut: statut,
         );
       }
+      logger.e('❌ PlanningDetail insertion retourned ID: $insertId');
       return null;
     } catch (e) {
       logger.e('❌ Erreur créer planning_details: $e');
