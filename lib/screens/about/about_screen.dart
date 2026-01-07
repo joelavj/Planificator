@@ -206,6 +206,13 @@ class AboutScreen extends StatelessWidget {
                           const SizedBox(height: 12),
                           _buildDeveloperCard(
                             context,
+                            name: 'Maminirina ANDRIAMASINORO',
+                            role: 'Développeur Secondaire',
+                          ),
+
+                          const SizedBox(height: 12),
+                          _buildDeveloperCard(
+                            context,
                             name: 'Équipe de Développement',
                             role: 'Conception et Développement',
                           ),
