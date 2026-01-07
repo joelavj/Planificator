@@ -27,7 +27,7 @@ class FactureRepository extends ChangeNotifier {
         INNER JOIN Planning p ON pd.planning_id = p.planning_id
         INNER JOIN Traitement t ON p.traitement_id = t.traitement_id
         WHERE t.contrat_id = ?
-        ORDER BY f.date_traitement DESC
+        ORDER BY f.date_traitement ASC
       ''';
 
       final rows = await _db.query(sql, [contratId]);
@@ -42,8 +42,6 @@ class FactureRepository extends ChangeNotifier {
     }
   }
 
-  /// Charge les factures d'un client avec tous les détails jointes
-  /// Conforme à logique Kivy pour affichage complet
   Future<void> loadFacturesForClient(int clientId) async {
     _isLoading = true;
     _errorMessage = null;
@@ -77,7 +75,7 @@ class FactureRepository extends ChangeNotifier {
         LEFT JOIN Contrat co ON t.contrat_id = co.contrat_id
         LEFT JOIN Client cl ON co.client_id = cl.client_id
         WHERE cl.client_id = ?
-        ORDER BY f.date_traitement DESC
+        ORDER BY f.date_traitement ASC
       ''';
 
       final rows = await _db.query(sql, [clientId]);
@@ -128,7 +126,7 @@ class FactureRepository extends ChangeNotifier {
         LEFT JOIN TypeTraitement tt ON t.id_type_traitement = tt.id_type_traitement
         LEFT JOIN Contrat co ON t.contrat_id = co.contrat_id
         LEFT JOIN Client cl ON co.client_id = cl.client_id
-        ORDER BY f.date_traitement DESC
+        ORDER BY f.date_traitement ASC
       ''';
 
       final rows = await _db.query(sql);
@@ -164,7 +162,7 @@ class FactureRepository extends ChangeNotifier {
           f.axe
         FROM Facture f
         WHERE f.planning_detail_id = ?
-        ORDER BY f.date_traitement DESC
+        ORDER BY f.date_traitement ASC
       ''';
 
       final rows = await _db.query(sql, [planningDetailId]);
@@ -193,7 +191,7 @@ class FactureRepository extends ChangeNotifier {
           changed_by
         FROM Historique_prix
         WHERE facture_id = ?
-        ORDER BY change_date DESC
+        ORDER BY change_date ASC
       ''';
 
       final rows = await _db.query(sql, [factureId]);
@@ -539,7 +537,7 @@ class FactureRepository extends ChangeNotifier {
         LEFT JOIN TypeTraitement tt ON t.id_type_traitement = tt.id_type_traitement
         LEFT JOIN Contrat c ON t.contrat_id = c.contrat_id
         WHERE c.client_id = ?
-        ORDER BY f.date_traitement DESC
+        ORDER BY f.date_traitement ASC
       ''';
 
       final rows = await _db.query(sql, [clientId]);
