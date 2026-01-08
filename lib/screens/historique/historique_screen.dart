@@ -1,3 +1,5 @@
+import 'dart:math' as logger;
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -376,9 +378,37 @@ class _PlanningListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Trier les plannings par date décroissante (plus récents en haut)
+    final sortedPlannings = List<Map<String, dynamic>>.from(plannings);
+    try {
+      sortedPlannings.sort((a, b) {
+        // Utiliser la clé qui existe vraiment dans les données
+        final dateKeyA = a.containsKey('date')
+            ? 'date'
+            : a.containsKey('date_planification')
+            ? 'date_planification'
+            : null;
+        final dateKeyB = b.containsKey('date')
+            ? 'date'
+            : b.containsKey('date_planification')
+            ? 'date_planification'
+            : null;
+
+        if (dateKeyA == null || dateKeyB == null) {
+          return 0;
+        }
+
+        final dateA = a[dateKeyA].toString();
+        final dateB = b[dateKeyB].toString();
+        return dateB.compareTo(dateA); // Décroissant: plus récent en premier
+      });
+    } catch (e) {
+      // Erreur lors du tri - on continue sans tri
+    }
+
     return Scaffold(
       appBar: AppBar(title: Text(title)),
-      body: plannings.isEmpty
+      body: sortedPlannings.isEmpty
           ? const EmptyStateWidget(
               title: 'Aucun planning',
               message: 'Aucun planning pour cette combinaison',
@@ -386,9 +416,9 @@ class _PlanningListScreen extends StatelessWidget {
             )
           : ListView.builder(
               padding: const EdgeInsets.all(12),
-              itemCount: plannings.length,
+              itemCount: sortedPlannings.length,
               itemBuilder: (context, index) {
-                final planning = plannings[index];
+                final planning = sortedPlannings[index];
                 return _PlanningCard(
                   planning: planning,
                   onTap: () {
@@ -427,7 +457,9 @@ class _PlanningCard extends StatelessWidget {
     if (value is double) return value.toString();
     if (value is bool) return value.toString();
     if (value is DateTime) {
-      return '${value.day.toString().padLeft(2, '0')}/${value.month.toString().padLeft(2, '0')}/${value.year}';
+      final dateStr = DateFormat('EEEE dd MMMM yyyy', 'fr_FR').format(value);
+      // Mettre en majuscule le premier caractère du jour
+      return dateStr[0].toUpperCase() + dateStr.substring(1);
     }
     if (value is List<int>) {
       try {
@@ -566,7 +598,11 @@ class _TreatmentDetailScreenState extends State<_TreatmentDetailScreen> {
     if (value is int) return value.toString();
     if (value is double) return value.toString();
     if (value is bool) return value.toString();
-    if (value is DateTime) return value.toString();
+    if (value is DateTime) {
+      final dateStr = DateFormat('EEEE dd MMMM yyyy', 'fr_FR').format(value);
+      // Mettre en majuscule le premier caractère du jour
+      return dateStr[0].toUpperCase() + dateStr.substring(1);
+    }
     if (value is List<int>) {
       try {
         return String.fromCharCodes(value);
