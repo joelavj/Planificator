@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:planificator/models/index.dart';
-import 'package:planificator/repositories/remarque_repository.dart';
-import 'package:planificator/repositories/facture_repository.dart';
-import 'package:planificator/utils/date_helper.dart';
+import 'package:Planificator/models/index.dart';
+import 'package:Planificator/repositories/remarque_repository.dart';
+import 'package:Planificator/repositories/facture_repository.dart';
+import 'package:Planificator/utils/date_helper.dart';
 
 class RemarqueDialog extends StatefulWidget {
   final PlanningDetails planningDetail;
@@ -29,6 +29,7 @@ class _RemarqueDialogState extends State<RemarqueDialog> {
   late TextEditingController _datePayementCtrl;
   late TextEditingController _etablissementCtrl;
   late TextEditingController _numeroChequeCtrl;
+  late TextEditingController _referenceCtrl;
 
   bool _estPayee = false;
   String? _modePaiement;
@@ -46,6 +47,9 @@ class _RemarqueDialogState extends State<RemarqueDialog> {
     _datePayementCtrl = TextEditingController();
     _etablissementCtrl = TextEditingController();
     _numeroChequeCtrl = TextEditingController();
+    _referenceCtrl = TextEditingController(
+      text: widget.facture.referenceFacture ?? '',
+    );
   }
 
   @override
@@ -57,6 +61,7 @@ class _RemarqueDialogState extends State<RemarqueDialog> {
     _datePayementCtrl.dispose();
     _etablissementCtrl.dispose();
     _numeroChequeCtrl.dispose();
+    _referenceCtrl.dispose();
     super.dispose();
   }
 
@@ -133,6 +138,15 @@ class _RemarqueDialogState extends State<RemarqueDialog> {
         await factureRepo.updateFacturePrice(widget.facture.factureId, montant);
       }
 
+      // Mettre à jour la référence si modifiée
+      if (_referenceCtrl.text.isNotEmpty &&
+          _referenceCtrl.text != (widget.facture.referenceFacture ?? '')) {
+        await factureRepo.updateFactureReference(
+          widget.facture.factureId,
+          _referenceCtrl.text,
+        );
+      }
+
       // Marquer comme payée si nécessaire
       if (_estPayee) {
         await factureRepo.markAsPaid(widget.facture.factureId);
@@ -192,9 +206,11 @@ class _RemarqueDialogState extends State<RemarqueDialog> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.grey[100],
+                  color: _estPayee ? Colors.green[50] : Colors.grey[100],
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey[300]!),
+                  border: Border.all(
+                    color: _estPayee ? Colors.green[300]! : Colors.grey[300]!,
+                  ),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -219,34 +235,73 @@ class _RemarqueDialogState extends State<RemarqueDialog> {
                         ),
                       ],
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.blue[50],
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        '${widget.facture.montant} Ar',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.blue[700],
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _estPayee
+                                ? Colors.green[100]
+                                : Colors.orange[100],
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            _estPayee ? 'Payée' : 'Non payée',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: _estPayee
+                                  ? Colors.green[700]
+                                  : Colors.orange[700],
+                            ),
+                          ),
                         ),
-                      ),
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.blue[50],
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            '${widget.facture.montant} Ar',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue[700],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 16),
 
+              // Référence de la facture
+              TextField(
+                controller: _referenceCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Référence facture',
+                  border: OutlineInputBorder(),
+                  hintText: 'Entrez une référence personnalisée...',
+                ),
+              ),
+              const SizedBox(height: 12),
+
               // Contenu remarque
               TextField(
                 controller: _contenuCtrl,
                 decoration: const InputDecoration(
-                  labelText: 'Remarque (optionnelle)',
+                  labelText: 'Remarque (Obligatoire)',
                   border: OutlineInputBorder(),
                   hintText: 'Notes sur la visite...',
                 ),
@@ -258,7 +313,7 @@ class _RemarqueDialogState extends State<RemarqueDialog> {
               TextField(
                 controller: _problemeCtrl,
                 decoration: const InputDecoration(
-                  labelText: 'Problème identifié (optionnel)',
+                  labelText: 'Problème identifié (Obligatoire)',
                   border: OutlineInputBorder(),
                   hintText: 'Problème rencontré...',
                 ),
@@ -269,7 +324,7 @@ class _RemarqueDialogState extends State<RemarqueDialog> {
               TextField(
                 controller: _actionCtrl,
                 decoration: const InputDecoration(
-                  labelText: 'Action corrective (optionnelle)',
+                  labelText: 'Action corrective (Obligatoire)',
                   border: OutlineInputBorder(),
                   hintText: 'Action à prendre...',
                 ),

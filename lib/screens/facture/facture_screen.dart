@@ -56,7 +56,16 @@ class _FactureScreenState extends State<FactureScreen> {
   }
 
   /// Construit l'en-tête avec gradient et barre de recherche
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, List<Facture> factures) {
+    final filteredFactures = _filterFacturesBySearch(factures);
+    // Compter le nombre de traitements uniques
+    final treatments = <String>{};
+    for (final f in filteredFactures) {
+      if (f.typeTreatment != null && f.typeTreatment!.isNotEmpty) {
+        treatments.add(f.typeTreatment!);
+      }
+    }
+
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -135,6 +144,49 @@ class _FactureScreenState extends State<FactureScreen> {
               ),
             ],
           ),
+          const SizedBox(height: 12),
+          // Badges pour nombre de factures et traitements
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.25),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '${filteredFactures.length} ${filteredFactures.length > 1 ? 'factures' : 'facture'}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.25),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '${treatments.length} ${treatments.length > 1 ? 'traitements' : 'traitement'}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -149,7 +201,7 @@ class _FactureScreenState extends State<FactureScreen> {
             child: Column(
               children: [
                 // En-tête avec gradient et barre de recherche
-                _buildHeader(context),
+                _buildHeader(context, factureRepo.factures),
 
                 // Liste des factures
                 Padding(
@@ -373,6 +425,20 @@ class _FactureDetailScreenState extends State<_FactureDetailScreen> {
   }
 
   void _showModifierPrixDialog(Facture facture) {
+    // ✅ Vérifier si la facture est déjà payée
+    if (facture.etat == 'Payé' || facture.etat == 'Payée') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            '❌ Impossible de modifier le prix d\'une facture payée',
+          ),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
     final prixInitialCtrl = TextEditingController(
       text: facture.montant.toString(),
     );
@@ -528,6 +594,10 @@ class _FactureDetailScreenState extends State<_FactureDetailScreen> {
                   // ✅ CORRECTION: Recharger les données directement sans délai arbitraire
                   if (mounted) {
                     await context.read<FactureRepository>().loadAllFactures();
+                    // Rafraîchir l'écran détail
+                    if (mounted) {
+                      setState(() {});
+                    }
                   }
                 } catch (e) {
                   logger.e('Erreur modification prix: $e');
@@ -653,6 +723,8 @@ class _FactureRow extends StatelessWidget {
     switch (etat.toLowerCase()) {
       case 'payé':
         return Colors.green;
+      case 'payée':
+        return Colors.green;
       case 'non payé':
         return Colors.orange;
       default:
@@ -660,12 +732,16 @@ class _FactureRow extends StatelessWidget {
     }
   }
 
+  bool get _isPaid =>
+      facture.etat.toLowerCase() == 'payé' ||
+      facture.etat.toLowerCase() == 'payée';
+
   @override
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8),
       child: InkWell(
-        onTap: onTapModifier,
+        onTap: _isPaid ? null : onTapModifier,
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Column(
@@ -676,18 +752,20 @@ class _FactureRow extends StatelessWidget {
                 children: [
                   Text(
                     DateFormat('dd/MM/yyyy').format(facture.dateTraitement),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
+                      color: _isPaid ? Colors.grey : Colors.black,
                     ),
                   ),
                   Row(
                     children: [
                       Text(
                         '${facture.montant} Ar',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
+                          color: _isPaid ? Colors.grey : Colors.black,
                         ),
                       ),
                       const SizedBox(width: 12),

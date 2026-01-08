@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:logger/logger.dart';
-import 'package:planificator/models/index.dart';
-import 'package:planificator/repositories/signalement_repository.dart';
-import 'package:planificator/utils/date_helper.dart';
+import 'package:Planificator/models/index.dart';
+import 'package:Planificator/repositories/signalement_repository.dart';
+import 'package:Planificator/utils/date_helper.dart';
 
 class SignalementDialog extends StatefulWidget {
   final PlanningDetails planningDetail;

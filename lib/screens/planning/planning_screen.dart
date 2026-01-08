@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:planificator/models/planning_details.dart';
+import 'package:Planificator/models/planning_details.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:provider/provider.dart';
 import 'package:logger/logger.dart';
@@ -137,10 +137,15 @@ class _PlanningScreenState extends State<PlanningScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        DateFormat(
-                          'EEEE dd MMMM yyyy',
-                          'fr_FR',
-                        ).format(_selectedDay),
+                        () {
+                          final dateStr = DateFormat(
+                            'EEEE dd MMMM yyyy',
+                            'fr_FR',
+                          ).format(_selectedDay);
+                          // Mettre en majuscule le premier caractère du jour
+                          return dateStr[0].toUpperCase() +
+                              dateStr.substring(1);
+                        }(),
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -455,7 +460,11 @@ class _PlanningDetailScreenState extends State<_PlanningDetailScreen> {
                             if (mounted) {
                               await context
                                   .read<PlanningDetailsRepository>()
-                                  .loadUpcomingTreatmentsComplete();
+                                  .loadAllTreatmentsComplete();
+                              // ✅ Recharger aussi les factures pour les voir dans Factures
+                              await context
+                                  .read<FactureRepository>()
+                                  .loadAllFactures();
                             }
 
                             if (mounted) {
@@ -525,7 +534,9 @@ class _PlanningDetailScreenState extends State<_PlanningDetailScreen> {
             if (mounted) {
               await context
                   .read<PlanningDetailsRepository>()
-                  .loadUpcomingTreatmentsComplete();
+                  .loadAllTreatmentsComplete();
+              // ✅ Recharger aussi les factures
+              await context.read<FactureRepository>().loadAllFactures();
             }
 
             // Afficher le succès

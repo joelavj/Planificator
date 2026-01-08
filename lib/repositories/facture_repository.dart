@@ -268,6 +268,56 @@ class FactureRepository extends ChangeNotifier {
     }
   }
 
+  /// Met à jour la référence d'une facture
+  Future<bool> updateFactureReference(
+    int factureId,
+    String newReference,
+  ) async {
+    try {
+      const sql =
+          'UPDATE Facture SET reference_facture = ? WHERE facture_id = ?';
+
+      // Envoyer null à la BD si vide, sinon la nouvelle valeur
+      final refValue = newReference.isEmpty ? null : newReference;
+      await _db.execute(sql, [refValue, factureId]);
+
+      // Mettre à jour dans la liste locale
+      final index = _factures.indexWhere((f) => f.factureId == factureId);
+      if (index != -1) {
+        final old = _factures[index];
+        // Créer une nouvelle instance avec la référence mise à jour
+        _factures[index] = Facture(
+          factureId: old.factureId,
+          planningDetailsId: old.planningDetailsId,
+          referenceFacture: refValue,
+          montant: old.montant,
+          mode: old.mode,
+          etablissementPayeur: old.etablissementPayeur,
+          dateCheque: old.dateCheque,
+          numeroCheque: old.numeroCheque,
+          dateTraitement: old.dateTraitement,
+          etat: old.etat,
+          axe: old.axe,
+          clientId: old.clientId,
+          clientNom: old.clientNom,
+          clientPrenom: old.clientPrenom,
+          typeTreatment: old.typeTreatment,
+          datePlanification: old.datePlanification,
+          etatPlanning: old.etatPlanning,
+        );
+      }
+
+      logger.i('✅ Référence facture $factureId mise à jour: $newReference');
+
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      logger.e('❌ Erreur lors de la mise à jour de la référence: $e');
+      return false;
+    }
+  }
+
   /// Met à jour le montant d'une facture et applique la différence aux factures postérieures
   /// du même traitement. Crée aussi des entrées dans l'historique.
   /// Logique conforme au code Kivy:
@@ -315,7 +365,7 @@ class FactureRepository extends ChangeNotifier {
 
       // Étape 3: Récupérer toutes les factures du même traitement avec date >= dateActuelle
       const getOtherFacturesSql = '''
-        SELECT f.facture_id, f.montant, f.date_traitement
+        SELECT f.facture_id, f.montant, f.date_traitement, f.etat
         FROM Facture f
         LEFT JOIN PlanningDetails pd ON f.planning_detail_id = pd.planning_detail_id
         LEFT JOIN Planning p ON pd.planning_id = p.planning_id
@@ -335,6 +385,14 @@ class FactureRepository extends ChangeNotifier {
       for (final row in otherFactures) {
         final fId = row['facture_id'] as int;
         final ancienMontant = row['montant'] as int;
+        final etat = (row['etat'] as String?)?.trim() ?? '';
+
+        // ✅ LOGIQUE: Si la facture est déjà payée, ne pas modifier le montant
+        if (etat == 'Payé' || etat == 'Payée') {
+          logger.i('⚠️ Facture $fId est payée, montant inchangé (état: $etat)');
+          continue; // Passer à la prochaine facture
+        }
+
         final nouveauMontant = ancienMontant + prixDiff;
 
         // Mettre à jour le montant
@@ -366,10 +424,13 @@ class FactureRepository extends ChangeNotifier {
                 ) >=
                 0 &&
             facture.montant > 0) {
-          final newMontantLocal = facture.montant + prixDiff;
-          final index = _factures.indexOf(facture);
-          if (index != -1) {
-            _factures[index] = facture.copyWith(montant: newMontantLocal);
+          // ✅ LOGIQUE: Ne pas modifier les factures payées
+          if (facture.etat != 'Payé' && facture.etat != 'Payée') {
+            final newMontantLocal = facture.montant + prixDiff;
+            final index = _factures.indexOf(facture);
+            if (index != -1) {
+              _factures[index] = facture.copyWith(montant: newMontantLocal);
+            }
           }
         }
       }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:planificator/screens/home/home_screen.dart';
+import 'package:Planificator/screens/home/home_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:logger/logger.dart';
@@ -27,6 +27,7 @@ class _ContratScreenState extends State<ContratScreen> {
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
   final logger = Logger();
+  int _contratCount = 0;
 
   @override
   void initState() {
@@ -219,6 +220,23 @@ class _ContratScreenState extends State<ContratScreen> {
               ),
             ],
           ),
+          const SizedBox(height: 12),
+          // Badge nombre de contrats
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.25),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              '$_contratCount ${_contratCount > 1 ? 'contrats' : 'contrat'}',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -277,6 +295,15 @@ class _ContratScreenState extends State<ContratScreen> {
                 }
 
                 var contratsWithDetails = snapshot.data!;
+
+                // Mettre à jour le nombre de contrats affichés
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (_contratCount != contratsWithDetails.length) {
+                    setState(() {
+                      _contratCount = contratsWithDetails.length;
+                    });
+                  }
+                });
 
                 // Appliquer le filtre de recherche
                 if (_searchQuery.isNotEmpty) {
