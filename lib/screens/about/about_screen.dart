@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
@@ -167,6 +168,7 @@ class AboutScreen extends StatelessWidget {
                             name: 'APEXNova Labs',
                             description:
                                 'Équipe de développement spécialisée dans les applications mobiles et web modernes',
+                            githubUrl: 'https://github.com/APEXNovaLabs',
                           ),
                         ],
                       ),
@@ -202,12 +204,14 @@ class AboutScreen extends StatelessWidget {
                             context,
                             name: 'Josoa VONJINIAINA',
                             role: 'Développeur Principal',
+                            githubUrl: 'https://github.com/josoavj',
                           ),
                           const SizedBox(height: 12),
                           _buildDeveloperCard(
                             context,
                             name: 'Maminirina ANDRIAMASINORO',
                             role: 'Développeur Secondaire',
+                            githubUrl: 'https://github.com/AinaMaminirina18',
                           ),
 
                           const SizedBox(height: 12),
@@ -215,6 +219,43 @@ class AboutScreen extends StatelessWidget {
                             context,
                             name: 'Équipe de Développement',
                             role: 'Conception et Développement',
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 32),
+                // Project Repository Section
+                SizedBox(
+                  width: double.infinity,
+                  child: Card(
+                    elevation: 4,
+                    shadowColor: Colors.grey.withOpacity(0.5),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(color: Colors.blue[100]!),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Code Source',
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.blue[700],
+                                ),
+                          ),
+                          const SizedBox(height: 16),
+                          _buildProjectCard(
+                            context,
+                            name: 'PlanificatorFinal',
+                            description: 'Dépôt GitHub officiel du projet',
+                            githubUrl:
+                                'https://github.com/josoavj/PlanificatorFinal',
                           ),
                         ],
                       ),
@@ -267,49 +308,62 @@ class AboutScreen extends StatelessWidget {
     BuildContext context, {
     required String name,
     required String description,
+    String? githubUrl,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.blue[50],
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.blue[200]!),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // Avatar
-          CircleAvatar(
-            radius: 28,
-            backgroundColor: Colors.blue[100],
-            child: Icon(Icons.business, size: 24, color: Colors.blue[600]),
-          ),
-          const SizedBox(width: 16),
-          // Organization Info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  description,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+    return GestureDetector(
+      onTap: githubUrl != null ? () => _launchUrl(context, githubUrl) : null,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.blue[50],
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.blue[200]!),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Avatar
+            CircleAvatar(
+              radius: 28,
+              backgroundColor: Colors.blue[100],
+              child: Icon(Icons.business, size: 24, color: Colors.blue[600]),
             ),
-          ),
-        ],
+            const SizedBox(width: 16),
+            // Organization Info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    description,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            if (githubUrl != null)
+              Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: Icon(
+                  Icons.open_in_new,
+                  size: 18,
+                  color: Colors.blue[600],
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -318,49 +372,135 @@ class AboutScreen extends StatelessWidget {
     BuildContext context, {
     required String name,
     required String role,
+    String? githubUrl,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.blue[50],
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.blue[200]!),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Avatar
-          CircleAvatar(
-            radius: 28,
-            backgroundColor: Colors.blue[100],
-            child: Icon(Icons.person, color: Colors.blue[600], size: 24),
-          ),
-          const SizedBox(width: 16),
-          // Developer Info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  role,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.grey[600],
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
+    return GestureDetector(
+      onTap: githubUrl != null ? () => _launchUrl(context, githubUrl) : null,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.blue[50],
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.blue[200]!),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Avatar
+            CircleAvatar(
+              radius: 28,
+              backgroundColor: Colors.blue[100],
+              child: Icon(Icons.person, color: Colors.blue[600], size: 24),
             ),
-          ),
-        ],
+            const SizedBox(width: 16),
+            // Developer Info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    role,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (githubUrl != null)
+              Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: Icon(
+                  Icons.open_in_new,
+                  size: 18,
+                  color: Colors.blue[600],
+                ),
+              ),
+          ],
+        ),
       ),
     );
+  }
+
+  Widget _buildProjectCard(
+    BuildContext context, {
+    required String name,
+    required String description,
+    required String githubUrl,
+  }) {
+    return GestureDetector(
+      onTap: () => _launchUrl(context, githubUrl),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.amber[50],
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.amber[200]!),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Avatar
+            CircleAvatar(
+              radius: 28,
+              backgroundColor: Colors.amber[100],
+              child: Icon(Icons.code, size: 24, color: Colors.amber[600]),
+            ),
+            const SizedBox(width: 16),
+            // Project Info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    description,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(left: 8),
+              child: Icon(
+                Icons.open_in_new,
+                size: 18,
+                color: Colors.amber[600],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _launchUrl(BuildContext context, String url) async {
+    if (await canLaunchUrl(Uri.parse(url))) {
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } else {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Impossible d\'ouvrir: $url')));
+    }
   }
 }
