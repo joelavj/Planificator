@@ -42,31 +42,31 @@ class _ClientListScreenState extends State<ClientListScreen> {
             );
           }
 
-          // État vide
-          if (repository.clients.isEmpty) {
-            return const EmptyStateWidget(
-              title: 'Aucun client',
-              message: 'Aucun client trouvé. Commencez par créer un client.',
-              icon: Icons.people_outline,
-              actionLabel: 'Ajouter un client',
-            );
-          }
-
           return Column(
             children: [
               // En-tête avec gradient bleu et barre de recherche
               _buildHeader(context, repository),
 
-              // Liste des clients
+              // Liste des clients ou état vide
               Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  itemCount: repository.clients.length,
-                  itemBuilder: (context, index) {
-                    final client = repository.clients[index];
-                    return _buildClientCard(context, repository, client);
-                  },
-                ),
+                child: repository.clients.isEmpty
+                    ? const Center(
+                        child: EmptyStateWidget(
+                          title: 'Aucun client',
+                          message:
+                              'Aucun client trouvé. Commencez par créer un client.',
+                          icon: Icons.people_outline,
+                          actionLabel: 'Ajouter un client',
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        itemCount: repository.clients.length,
+                        itemBuilder: (context, index) {
+                          final client = repository.clients[index];
+                          return _buildClientCard(context, repository, client);
+                        },
+                      ),
               ),
             ],
           );
@@ -93,57 +93,84 @@ class _ClientListScreenState extends State<ClientListScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          TextField(
-            controller: _searchController,
-            decoration: InputDecoration(
-              hintText: 'Rechercher par nom, email...',
-              hintStyle: const TextStyle(color: Colors.white70),
-              prefixIcon: const Icon(Icons.search, color: Colors.white70),
-              suffixIcon: _searchController.text.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.close, color: Colors.white),
-                      onPressed: () {
-                        _searchController.clear();
-                        repository.loadClients();
-                        setState(() {});
-                      },
-                    )
-                  : null,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
+          // Barre de recherche avec bouton d'actualisation
+          Row(
+            children: [
+              // Barre de recherche
+              Expanded(
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Rechercher par nom, email...',
+                    hintStyle: const TextStyle(color: Colors.white70),
+                    prefixIcon: const Icon(Icons.search, color: Colors.white70),
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.close, color: Colors.white),
+                            onPressed: () {
+                              _searchController.clear();
+                              repository.loadClients();
+                              setState(() {});
+                            },
+                          )
+                        : null,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    filled: true,
+                    fillColor: Colors.white.withOpacity(0.2),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                  ),
+                  style: const TextStyle(color: Colors.white),
+                  onChanged: (query) {
+                    setState(() {});
+                    if (query.isEmpty) {
+                      repository.loadClients();
+                    } else {
+                      repository.searchClients(query);
+                    }
+                  },
+                ),
               ),
-              filled: true,
-              fillColor: Colors.white.withOpacity(0.2),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 12,
+              const SizedBox(width: 12),
+              // Bouton d'actualisation
+              Tooltip(
+                message: 'Actualiser',
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.25),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.refresh, color: Colors.white),
+                    onPressed: () {
+                      _searchController.clear();
+                      repository.loadClients();
+                      setState(() {});
+                    },
+                  ),
+                ),
               ),
-            ),
-            style: const TextStyle(color: Colors.white),
-            onChanged: (query) {
-              setState(() {});
-              if (query.isEmpty) {
-                repository.loadClients();
-              } else {
-                repository.searchClients(query);
-              }
-            },
+            ],
           ),
           const SizedBox(height: 12),
           // Badge nombre de clients
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.25),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
-              '${repository.clients.length} client(s)',
+              '${repository.clients.length} ${repository.clients.length > 1 ? 'clients' : 'client'}',
               style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w600,
-                fontSize: 12,
+                fontSize: 14,
               ),
             ),
           ),
