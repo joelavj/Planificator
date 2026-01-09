@@ -412,6 +412,39 @@ class _FactureDetailCard extends StatelessWidget {
 
   const _FactureDetailCard({required this.facture, required this.onTap});
 
+  Color _getStatusBgColor(String etat) {
+    if (etat.toLowerCase().contains('payée') ||
+        etat.toLowerCase().contains('payé')) {
+      return Colors.green.shade100;
+    } else if (etat.toLowerCase().contains('à venir')) {
+      return Colors.red.shade100;
+    } else {
+      return Colors.red.shade100;
+    }
+  }
+
+  Color _getStatusTextColor(String etat) {
+    if (etat.toLowerCase().contains('payée') ||
+        etat.toLowerCase().contains('payé')) {
+      return Colors.green.shade800;
+    } else if (etat.toLowerCase().contains('à venir')) {
+      return Colors.red.shade800;
+    } else {
+      return Colors.red.shade800;
+    }
+  }
+
+  String _getStatusText(String etat) {
+    if (etat.toLowerCase().contains('payée') ||
+        etat.toLowerCase().contains('payé')) {
+      return 'Payée';
+    } else if (etat.toLowerCase().contains('à venir')) {
+      return 'À venir';
+    } else {
+      return 'Non payée';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -449,18 +482,14 @@ class _FactureDetailCard extends StatelessWidget {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: facture.isPaid
-                            ? Colors.green.shade100
-                            : Colors.orange.shade100,
+                        color: _getStatusBgColor(facture.etat),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        facture.isPaid ? 'Payée' : 'Non payée',
+                        _getStatusText(facture.etat),
                         style: TextStyle(
                           fontSize: 11,
-                          color: facture.isPaid
-                              ? Colors.green.shade800
-                              : Colors.orange.shade800,
+                          color: _getStatusTextColor(facture.etat),
                           fontWeight: FontWeight.w600,
                         ),
                       ),
