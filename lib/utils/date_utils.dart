@@ -1,6 +1,3 @@
-/// Utilitaires pour la gestion des dates
-/// Inclut la validation des jours fériés, les calculs de Pâques, etc.
-
 import 'package:intl/intl.dart';
 
 class DateUtils {
@@ -237,8 +234,7 @@ class DateUtils {
     // Générer les dates de planification selon la redondance
     DateTime currentDate = dateDebut;
 
-    while (currentDate.isBefore(dateFin) ||
-        currentDate.isAtSameMomentAs(dateFin)) {
+    while (currentDate.isBefore(dateFin)) {
       // Ajuster si weekend (dimanche) ET/OU jour férié
       var plannedDate = adjustIfWeekendAndHoliday(currentDate);
 
