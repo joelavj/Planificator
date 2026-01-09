@@ -726,7 +726,9 @@ class _FactureRow extends StatelessWidget {
       case 'payée':
         return Colors.green;
       case 'non payé':
-        return Colors.orange;
+        return Colors.red;
+      case 'à venir':
+        return Colors.red;
       default:
         return Colors.grey;
     }
