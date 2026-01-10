@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
+import 'package:logger/logger.dart';
 import '../../models/client.dart';
 import '../../repositories/index.dart';
 import '../../widgets/index.dart';
+import '../../services/database_service.dart';
 
 class ClientListScreen extends StatefulWidget {
   const ClientListScreen({Key? key}) : super(key: key);
@@ -13,6 +16,7 @@ class ClientListScreen extends StatefulWidget {
 
 class _ClientListScreenState extends State<ClientListScreen> {
   late TextEditingController _searchController;
+  final logger = Logger();
 
   @override
   void initState() {
@@ -470,7 +474,7 @@ class _ClientListScreenState extends State<ClientListScreen> {
       builder: (BuildContext ctx) => AlertDialog(
         title: const Text('Détails du Client'),
         content: SizedBox(
-          width: double.maxFinite,
+          width: 550,
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -481,7 +485,7 @@ class _ClientListScreenState extends State<ClientListScreen> {
                 // ═════════════════════════════════════════
                 _buildSectionHeader('👤 INFORMATIONS PERSONNELLES'),
                 _buildDetailRow('Nom', client.nom),
-                _buildDetailRow('Prénom', client.prenom),
+                _buildDetailRow(client.prenomLabel, client.prenom),
                 _buildDetailRow('Email', client.email),
                 _buildDetailRow('Téléphone', client.telephone),
                 const SizedBox(height: 16),
@@ -513,6 +517,68 @@ class _ClientListScreenState extends State<ClientListScreen> {
                   'Nombre de traitements',
                   '${client.treatmentCount}',
                 ),
+                if (client.treatmentCount > 0) ...[
+                  const SizedBox(height: 8),
+                  FutureBuilder<List<Map<String, dynamic>>>(
+                    future: _loadTraitementsByClient(client.clientId),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        );
+                      }
+
+                      if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                        return const Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: Text('Aucun traitement'),
+                        );
+                      }
+
+                      final traitements = snapshot.data!;
+                      return ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: traitements.length,
+                        itemBuilder: (context, index) {
+                          final t = traitements[index];
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[100],
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  t['nom'] ?? 'Traitement',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Type: ${t['type'] ?? '-'}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[700],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ],
               ],
             ),
           ),
@@ -522,6 +588,14 @@ class _ClientListScreenState extends State<ClientListScreen> {
             onPressed: () => Navigator.of(ctx).pop(),
             child: const Text('Fermer'),
           ),
+          if (client.treatmentCount > 0)
+            ElevatedButton.icon(
+              label: const Text('📅 Planning'),
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                _showClientPlanningDialog(context, client);
+              },
+            ),
           ElevatedButton.icon(
             icon: const Icon(Icons.edit, size: 18),
             label: const Text('Modifier'),
@@ -533,6 +607,272 @@ class _ClientListScreenState extends State<ClientListScreen> {
         ],
       ),
     );
+  }
+
+  /// Charger les traitements d'un client
+  Future<List<Map<String, dynamic>>> _loadTraitementsByClient(
+    int clientId,
+  ) async {
+    try {
+      final database = DatabaseService();
+      const sql = '''
+        SELECT DISTINCT t.traitement_id, t.contrat_id, tt.typeTraitement as nom,
+               tt.categorieTraitement as type
+        FROM Traitement t
+        LEFT JOIN TypeTraitement tt ON t.id_type_traitement = tt.id_type_traitement
+        INNER JOIN Contrat c ON t.contrat_id = c.contrat_id
+        WHERE c.client_id = ?
+        ORDER BY tt.typeTraitement ASC
+      ''';
+      return await database.query(sql, [clientId]);
+    } catch (e) {
+      logger.e('Erreur chargement traitements du client: $e');
+      return [];
+    }
+  }
+
+  /// Afficher le planning groupé par type de traitement pour un client
+  void _showClientPlanningDialog(BuildContext context, Client client) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('📅 Planning pour ${client.fullName}'),
+        content: SizedBox(
+          width: 550,
+          child: FutureBuilder<Map<String, List<Map<String, dynamic>>>>(
+            future: _loadClientTreatmentsByType(client.clientId),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (snapshot.hasError) {
+                return Text('Erreur: ${snapshot.error}');
+              }
+
+              final groupedTreatments = snapshot.data ?? {};
+
+              if (groupedTreatments.isEmpty) {
+                return const Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.event_busy, size: 48, color: Colors.grey),
+                      SizedBox(height: 16),
+                      Text('Aucun traitement trouvé'),
+                    ],
+                  ),
+                );
+              }
+
+              return ListView.builder(
+                shrinkWrap: true,
+                itemCount: groupedTreatments.length,
+                itemBuilder: (context, index) {
+                  final typeTraitement = groupedTreatments.keys.elementAt(
+                    index,
+                  );
+                  final traitements = groupedTreatments[typeTraitement] ?? [];
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header du type de traitement
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.blue[100],
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              typeTraitement,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: Colors.blue[900],
+                              ),
+                            ),
+                            Text(
+                              '${traitements.length} traitement(s)',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.blue[700],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      // Liste des plannings
+                      ...traitements.map((planning) {
+                        final dateStr = planning['date_planification'] != null
+                            ? DateFormat('EEEE dd MMMM yyyy', 'fr_FR').format(
+                                planning['date_planification'] as DateTime,
+                              )
+                            : 'Date N/A';
+                        final parts = dateStr.split(' ');
+                        if (parts.isNotEmpty) {
+                          parts[0] =
+                              parts[0][0].toUpperCase() + parts[0].substring(1);
+                        }
+                        if (parts.length > 2) {
+                          parts[2] =
+                              parts[2][0].toUpperCase() + parts[2].substring(1);
+                        }
+                        final capitalizedDate = parts.join(' ');
+
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[50],
+                            border: Border.all(
+                              color: Colors.grey[300]!,
+                              width: 0.5,
+                            ),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      capitalizedDate,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                  Text(
+                                    planning['etat'] ?? '-',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: _getStatusColor(
+                                        planning['etat'] as String?,
+                                      ),
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Contrat: ${planning['contrat_reference']}',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                  Text(
+                                    'Axe: ${planning['axe']}',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                      const SizedBox(height: 12),
+                    ],
+                  );
+                },
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Fermer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Charger les plannings groupés par type de traitement pour un client
+  Future<Map<String, List<Map<String, dynamic>>>> _loadClientTreatmentsByType(
+    int clientId,
+  ) async {
+    try {
+      final database = DatabaseService();
+      const sql = '''
+        SELECT DISTINCT 
+          t.traitement_id, 
+          t.contrat_id, 
+          tt.typeTraitement,
+          tt.categorieTraitement as type, 
+          c.reference_contrat as contrat_reference,
+          pd.planning_detail_id,
+          pd.date_planification,
+          pd.statut as etat,
+          p.planning_id,
+          cl.axe
+        FROM Traitement t
+        INNER JOIN TypeTraitement tt ON t.id_type_traitement = tt.id_type_traitement
+        INNER JOIN Contrat c ON t.contrat_id = c.contrat_id
+        INNER JOIN Client cl ON c.client_id = cl.client_id
+        LEFT JOIN Planning p ON p.traitement_id = t.traitement_id
+        LEFT JOIN PlanningDetails pd ON pd.planning_id = p.planning_id
+        WHERE c.client_id = ?
+        ORDER BY tt.typeTraitement ASC, pd.date_planification ASC
+      ''';
+
+      final rows = await database.query(sql, [clientId]);
+
+      final groupedMap = <String, List<Map<String, dynamic>>>{};
+
+      for (final row in rows) {
+        final typeTraitement =
+            (row['typeTraitement'] as String?) ?? 'Sans type';
+
+        final planningData = {
+          'traitementId': row['traitement_id'] as int,
+          'contratId': row['contrat_id'] as int,
+          'nom': typeTraitement,
+          'type': row['type'] as String,
+          'contrat_reference': row['contrat_reference'] as String,
+          'planning_detail_id': row['planning_detail_id'],
+          'date_planification': row['date_planification'] is String
+              ? DateTime.parse(row['date_planification'] as String)
+              : row['date_planification'] as DateTime?,
+          'axe': row['axe'] as String? ?? '-',
+          'etat': row['etat'] as String? ?? '-',
+        };
+
+        if (!groupedMap.containsKey(typeTraitement)) {
+          groupedMap[typeTraitement] = [];
+        }
+        // Vérifier si cette entrée a au moins un planning detail
+        if (planningData['planning_detail_id'] != null) {
+          groupedMap[typeTraitement]!.add(planningData);
+        }
+      }
+
+      return groupedMap;
+    } catch (e) {
+      logger.e('Erreur chargement traitements groupés: $e');
+      return {};
+    }
   }
 
   /// Affiche la boîte de dialogue de modification du client (style Contrat)
@@ -552,7 +892,7 @@ class _ClientListScreenState extends State<ClientListScreen> {
       builder: (BuildContext ctx) => AlertDialog(
         title: const Text('Modifier les informations du client'),
         content: SizedBox(
-          width: double.maxFinite,
+          width: 550,
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -563,7 +903,13 @@ class _ClientListScreenState extends State<ClientListScreen> {
                 // ═════════════════════════════════════════
                 _buildSectionHeader('👤 INFORMATIONS PERSONNELLES'),
                 _buildEditField('Nom', nomController),
-                _buildEditField('Prénom', prenomController),
+                _buildEditField(
+                  selectedCategorie == 'Société' ||
+                          selectedCategorie == 'Organisation'
+                      ? 'Responsable'
+                      : 'Prénom',
+                  prenomController,
+                ),
                 _buildEditField('Email', emailController),
                 _buildEditField('Téléphone', telephoneController),
                 const SizedBox(height: 16),
@@ -714,6 +1060,22 @@ class _ClientListScreenState extends State<ClientListScreen> {
         },
       ),
     );
+  }
+
+  /// Déterminer la couleur du statut
+  Color _getStatusColor(String? status) {
+    if (status == null) return Colors.grey;
+    final lower = status.toLowerCase();
+    if (lower.contains('complété') || lower.contains('done')) {
+      return Colors.green;
+    }
+    if (lower.contains('en attente') || lower.contains('pending')) {
+      return Colors.orange;
+    }
+    if (lower.contains('annulé') || lower.contains('cancelled')) {
+      return Colors.red;
+    }
+    return Colors.grey;
   }
 
   /// Construit un header de section (style Contrat)
