@@ -30,7 +30,23 @@ class Client {
   });
 
   /// Nom complet du client
-  String get fullName => '$prenom $nom';
+  /// Pour Société et Organisation: affiche seulement le nom
+  /// Pour les autres catégories: affiche prénom et nom
+  String get fullName {
+    if (categorie == 'Société' || categorie == 'Organisation') {
+      return nom;
+    }
+    return '$prenom $nom'.trim();
+  }
+
+  /// Récupère le label pour le prénom selon la catégorie
+  /// Retourne "Responsable" pour Société/Organisation, "Prénom" sinon
+  String get prenomLabel {
+    if (categorie == 'Société' || categorie == 'Organisation') {
+      return 'Responsable';
+    }
+    return 'Prénom';
+  }
 
   /// Factory constructor pour créer un Client à partir d'une Map (base de données)
   factory Client.fromMap(Map<String, dynamic> map) {

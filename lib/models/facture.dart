@@ -17,6 +17,7 @@ class Facture {
   final int? clientId;
   final String? clientNom;
   final String? clientPrenom;
+  final String? clientCategorie;
   final String? typeTreatment;
   final DateTime? datePlanification;
   final String? etatPlanning;
@@ -36,6 +37,7 @@ class Facture {
     this.clientId,
     this.clientNom,
     this.clientPrenom,
+    this.clientCategorie,
     this.typeTreatment,
     this.datePlanification,
     this.etatPlanning,
@@ -99,6 +101,7 @@ class Facture {
       clientId: map['client_id'] as int?,
       clientNom: map['clientNom'] as String?,
       clientPrenom: map['clientPrenom'] as String?,
+      clientCategorie: map['clientCategorie'] as String?,
       typeTreatment: map['typeTreatment'] as String?,
       datePlanification: map['datePlanification'] != null
           ? DateTime.tryParse(map['datePlanification'].toString())
@@ -128,7 +131,12 @@ class Facture {
   }
 
   /// Nom complet du client
+  /// Pour Société et Organisation: affiche seulement le nom
+  /// Pour les autres catégories: affiche prénom et nom
   String get clientFullName {
+    if (clientCategorie == 'Société' || clientCategorie == 'Organisation') {
+      return clientNom ?? 'N/A';
+    }
     if (clientPrenom != null || clientNom != null) {
       return '${clientPrenom ?? ''} ${clientNom ?? ''}'.trim();
     }
@@ -153,6 +161,7 @@ class Facture {
     int? clientId,
     String? clientNom,
     String? clientPrenom,
+    String? clientCategorie,
     String? typeTreatment,
     DateTime? datePlanification,
     String? etatPlanning,
