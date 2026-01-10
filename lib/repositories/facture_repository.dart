@@ -4,6 +4,7 @@ import '../models/index.dart';
 import '../services/index.dart';
 import '../utils/excel_utils.dart';
 import '../utils/date_helper.dart';
+import '../utils/date_utils.dart' as date_utils;
 
 class FactureRepository extends ChangeNotifier {
   final DatabaseService _db = DatabaseService();
@@ -64,6 +65,7 @@ class FactureRepository extends ChangeNotifier {
           cl.client_id,
           cl.nom as clientNom,
           cl.prenom as clientPrenom,
+          cl.categorie as clientCategorie,
           tt.typeTraitement as typeTreatment,
           pd.date_planification as datePlanification,
           pd.statut as etatPlanning
@@ -116,6 +118,7 @@ class FactureRepository extends ChangeNotifier {
           cl.client_id,
           cl.nom as clientNom,
           cl.prenom as clientPrenom,
+          cl.categorie as clientCategorie,
           tt.typeTraitement as typeTreatment,
           pd.date_planification as datePlanification,
           pd.statut as etatPlanning
@@ -487,6 +490,7 @@ class FactureRepository extends ChangeNotifier {
   }
 
   /// Version complète pour créer une facture avec tous les paramètres
+  /// Évite les doublons - vérifie si la facture existe déjà pour ce planning detail
   Future<int> createFactureComplete({
     required int planningDetailId,
     required String referenceFacture,
@@ -501,6 +505,18 @@ class FactureRepository extends ChangeNotifier {
     notifyListeners();
 
     try {
+      // ✅ Vérifier si une facture existe déjà pour ce planning detail
+      const checkSql =
+          'SELECT facture_id FROM Facture WHERE planning_detail_id = ?';
+      final existing = await _db.query(checkSql, [planningDetailId]);
+
+      if (existing.isNotEmpty) {
+        logger.i(
+          '⚠️ Facture existe déjà pour planning_detail_id=$planningDetailId, ID=${existing[0]['facture_id']}',
+        );
+        return existing[0]['facture_id'] as int;
+      }
+
       const sql = '''
         INSERT INTO Facture (planning_detail_id, reference_facture, montant, mode, date_traitement, etat, axe)
         VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -814,39 +830,16 @@ class FactureRepository extends ChangeNotifier {
     }
   }
 
-  /// ✅ Génère les dates de planning
+  /// ✅ Génère les dates de planning (utilise date_utils pour cohérence)
   List<DateTime> _generatePlanningDates({
     required DateTime dateDebut,
     required int dureeTraitement,
     required int redondance,
   }) {
-    final dates = <DateTime>[];
-    if (dureeTraitement <= 0) return dates;
-
-    if (redondance == 0) {
-      dates.add(dateDebut);
-      return dates;
-    }
-
-    if (redondance <= 0) return dates;
-
-    final dateFin = _addMonths(dateDebut, dureeTraitement);
-    DateTime currentDate = dateDebut;
-
-    while (currentDate.isBefore(dateFin)) {
-      dates.add(currentDate);
-      currentDate = _addMonths(currentDate, redondance);
-    }
-
-    return dates;
-  }
-
-  /// ✅ Ajoute des mois à une date
-  DateTime _addMonths(DateTime date, int months) {
-    var result = DateTime(date.year, date.month + months, date.day);
-    if (result.day != date.day) {
-      result = DateTime(result.year, result.month + 1, 0);
-    }
-    return result;
+    return date_utils.DateUtils.generatePlanningDates(
+      dateDebut: dateDebut,
+      dureeTraitement: dureeTraitement,
+      redondance: redondance,
+    );
   }
 }
