@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:core';
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
 import 'package:Planificator/models/planning_details.dart';
@@ -36,7 +38,7 @@ class PlanningDetailsRepository extends ChangeNotifier {
     String statut = 'À venir',
   }) async {
     try {
-      // ✅ Vérifier si la date existe déjà pour ce planning
+      // Vérifier si la date existe déjà pour ce planning
       final dateStr = datePlanification.toIso8601String().split('T')[0];
       final existingCheck = await _db.query(
         'SELECT planning_detail_id FROM PlanningDetails WHERE planning_id = ? AND date_planification = ?',
@@ -55,7 +57,7 @@ class PlanningDetailsRepository extends ChangeNotifier {
         );
       }
 
-      // ✅ Utiliser insert() au lieu de query() pour les INSERT
+      // Utiliser insert() au lieu de query() pour les INSERT
       final insertId = await _db.insert(
         'INSERT INTO PlanningDetails (planning_id, date_planification, statut) VALUES (?, ?, ?)',
         [planningId, dateStr, statut],
@@ -109,7 +111,7 @@ class PlanningDetailsRepository extends ChangeNotifier {
 
       logger.i('✅ Planning detail $planningDetailId statut => $newStatut');
 
-      // ✅ IMPORTANT: Recharger les données après la mise à jour
+      // IMPORTANT: Recharger les données après la mise à jour
       await loadUpcomingTreatmentsComplete();
 
       return true;
@@ -134,7 +136,7 @@ class PlanningDetailsRepository extends ChangeNotifier {
     }
   }
 
-  /// ✅ Charger tous les détails de planning
+  /// Charger tous les détails de planning
   Future<void> loadAllDetails() async {
     _isLoading = true;
     _errorMessage = null;
@@ -156,7 +158,7 @@ class PlanningDetailsRepository extends ChangeNotifier {
     }
   }
 
-  /// ✅ Charger les traitements du mois courant (table_en_cours) - Version complète avec JOINs
+  /// Charger les traitements du mois courant (table_en_cours) - Version complète avec JOINs
   /// Retourne: List<Map> avec clés: date, traitement, etat, axe
   Future<List<Map<String, dynamic>>>
   loadCurrentMonthTreatmentsComplete() async {
@@ -173,7 +175,7 @@ class PlanningDetailsRepository extends ChangeNotifier {
         '🔍 Chargement COMPLET traitements du mois $currentMonth/$currentYear',
       );
 
-      // ✅ Requête COMPLÈTE: récupère typeTraitement + categorieTraitement + nom + prenom + axe
+      // Requête COMPLÈTE: récupère typeTraitement + categorieTraitement + nom + prenom + axe
       final results = await _db.query(
         '''SELECT 
              pd.planning_detail_id,
@@ -225,7 +227,7 @@ class PlanningDetailsRepository extends ChangeNotifier {
     }
   }
 
-  /// ✅ Charger les traitements à venir (table_prevision) - Version complète avec JOINs
+  /// Charger les traitements à venir (table_prevision) - Version complète avec JOINs
   /// Retourne: List<Map> avec clés: date, traitement, etat, axe
   Future<List<Map<String, dynamic>>> loadUpcomingTreatmentsComplete() async {
     _isLoading = true;
@@ -240,7 +242,7 @@ class PlanningDetailsRepository extends ChangeNotifier {
         '🔍 Chargement COMPLET traitements à venir (à partir de $todayStr)',
       );
 
-      // ✅ Requête COMPLÈTE: récupère typeTraitement + categorieTraitement + nom + prenom + axe
+      // Requête COMPLÈTE: récupère typeTraitement + categorieTraitement + nom + prenom + axe
       final results = await _db.query(
         '''SELECT 
              pd.planning_detail_id,
@@ -344,15 +346,16 @@ class PlanningDetailsRepository extends ChangeNotifier {
           DateTime? dateTimeA;
           DateTime? dateTimeB;
 
-          if (dateA is DateTime)
+          if (dateA is DateTime) {
             dateTimeA = dateA;
-          else if (dateA is String)
+          } else if (dateA is String) {
             dateTimeA = DateTime.tryParse(dateA);
-
-          if (dateB is DateTime)
+          }
+          if (dateB is DateTime) {
             dateTimeB = dateB;
-          else if (dateB is String)
+          } else if (dateB is String) {
             dateTimeB = DateTime.tryParse(dateB);
+          }
 
           if (dateTimeA == null || dateTimeB == null) return 0;
           return dateTimeB.compareTo(dateTimeA); // DESC: plus récent en premier

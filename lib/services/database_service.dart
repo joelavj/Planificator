@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:logger/logger.dart';
 import 'package:mysql1/mysql1.dart';
 
@@ -103,7 +104,15 @@ class DatabaseService {
         logger.d('Params: $params');
       }
 
-      Results results = await _connection.query(sql, params);
+      Results results = await _connection
+          .query(sql, params)
+          .timeout(
+            const Duration(seconds: 30),
+            onTimeout: () {
+              logger.e('⏱️ Timeout de requête après 30 secondes');
+              throw TimeoutException('La requête a dépassé le délai imparti');
+            },
+          );
 
       List<Map<String, dynamic>> rows = [];
       for (var row in results) {
