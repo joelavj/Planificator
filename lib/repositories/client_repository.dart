@@ -39,6 +39,9 @@ class ClientRepository extends ChangeNotifier {
       final rows = await _db.query(sql);
       _clients = rows.map((row) => Client.fromMap(row)).toList();
 
+      // Trier par nom de client (au cas où la BD ne le ferait pas)
+      _clients.sort((a, b) => (a.nom ?? '').compareTo(b.nom ?? ''));
+
       logger.i('${_clients.length} clients chargés');
     } catch (e) {
       _errorMessage = e.toString();
@@ -297,6 +300,9 @@ class ClientRepository extends ChangeNotifier {
       final rows = await _db.query(sql, [searchTerm, searchTerm, searchTerm]);
       _clients = rows.map((row) => Client.fromMap(row)).toList();
 
+      // Trier par nom de client
+      _clients.sort((a, b) => (a.nom ?? '').compareTo(b.nom ?? ''));
+
       logger.i('${_clients.length} clients trouvés pour la recherche: $query');
     } catch (e) {
       _errorMessage = e.toString();
@@ -325,6 +331,9 @@ class ClientRepository extends ChangeNotifier {
 
       final rows = await _db.query(sql, [category]);
       _clients = rows.map((row) => Client.fromMap(row)).toList();
+
+      // Trier par nom de client
+      _clients.sort((a, b) => (a.nom ?? '').compareTo(b.nom ?? ''));
 
       logger.i(
         '${_clients.length} clients trouvés pour la catégorie: $category',
