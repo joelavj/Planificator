@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'dart:async';
 import 'dart:io';
+import 'dart:convert';
 import 'package:logger/logger.dart' as logger_pkg;
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
@@ -254,9 +255,11 @@ class LoggingService {
 
     try {
       await _rotateLogsIfNeeded();
+      // Forcer UTF-8 pour Windows, macOS, Linux (évite les problèmes d'encodage)
       await _currentLogFile!.writeAsString(
         '${entry.plainText}\n',
         mode: FileMode.append,
+        encoding: const Utf8Codec(),
       );
     } catch (e) {
       // Ignorer silencieusement les erreurs d'écriture fichier
