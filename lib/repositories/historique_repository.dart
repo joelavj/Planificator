@@ -27,15 +27,16 @@ class HistoriqueRepository extends ChangeNotifier {
         SELECT 
           h.historique_id,
           h.date_historique as date,
-          f.facture_id,
-          pd.date_planification,
-          h.contenu as description,
-          h.issue,
-          h.action
+          COALESCE(f.facture_id, 0) as facture_id,
+          COALESCE(pd.date_planification, '2000-01-01') as date_planification,
+          COALESCE(h.contenu, 'Événement') as description,
+          COALESCE(h.issue, 'Non défini') as issue,
+          COALESCE(h.action, 'Aucune') as action
         FROM Historique h
         LEFT JOIN Facture f ON h.facture_id = f.facture_id
         LEFT JOIN PlanningDetails pd ON h.planning_detail_id = pd.planning_detail_id
         ORDER BY h.date_historique DESC
+        LIMIT 5000
       ''';
 
       final rows = await _db.query(sql);
@@ -70,13 +71,14 @@ class HistoriqueRepository extends ChangeNotifier {
         SELECT 
           h.historique_id,
           h.date_historique as date,
-          h.contenu as description,
-          h.issue,
-          h.action
+          COALESCE(h.contenu, 'Événement') as description,
+          COALESCE(h.issue, 'Non défini') as issue,
+          COALESCE(h.action, 'Aucune') as action
         FROM Historique h
         LEFT JOIN Facture f ON h.facture_id = f.facture_id
-        WHERE f.axe = ?
+        WHERE f.axe = ? OR COALESCE(f.axe, ?) = ?
         ORDER BY h.date_historique DESC
+        LIMIT 2000
       ''';
 
       final rows = await _db.query(sql, [categorie]);
