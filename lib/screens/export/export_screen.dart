@@ -30,9 +30,6 @@ class _ExportScreenState extends State<ExportScreen> {
   // Options pour les dropdowns
   final List<String> _categories = ['Facture', 'Traitement'];
   List<String> _traitements = ['Tous'];
-  Map<String, String> _traitementMap = {
-    'Tous': 'Tous',
-  }; // Map affichage -> valeur DB
   final List<String> _mois = [
     'Tous',
     'Janvier',
@@ -136,7 +133,6 @@ class _ExportScreenState extends State<ExportScreen> {
       if (mounted) {
         setState(() {
           _traitements = treatments;
-          _traitementMap = traitementMap;
           _selectedTraitement = 'Tous';
           final clientName = clientId == -1
               ? 'tous les clients'

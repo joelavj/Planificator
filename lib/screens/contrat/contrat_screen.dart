@@ -904,11 +904,9 @@ class _ContratScreenState extends State<ContratScreen> {
             WHERE p.traitement_id = ?
           ''';
           final montantResult = await db.query(sqlMontant, [traitementId]);
-          montantTotal =
-              (montantResult.isNotEmpty
-                  ? (montantResult[0]['total'] as num?)?.toInt() ?? 0
-                  : 0) ??
-              0;
+          montantTotal = montantResult.isNotEmpty
+              ? (montantResult[0]['total'] as num?)?.toInt() ?? 0
+              : 0;
         } catch (e) {
           logger.w('Erreur calcul montant: $e');
           montantTotal = 0;
@@ -1250,59 +1248,6 @@ class _ContratScreenState extends State<ContratScreen> {
       logger.e('Erreur chargement factures groupées: $e');
       return {};
     }
-  }
-
-  /// Réparer les factures d'un contrat
-  void _repairFactures(Contrat contrat) {
-    // Charger les traitements du contrat
-    _loadTraitements(contrat.contratId).then((traitements) {
-      if (traitements.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('❌ Aucun traitement trouvé pour ce contrat'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
-
-      showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('🔧 Réparer Factures'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('Sélectionnez le traitement à réparer:'),
-                const SizedBox(height: 16),
-                // Liste des traitements sans ListView
-                ...traitements.map(
-                  (t) => ListTile(
-                    title: Text(t['nom'] ?? 'Traitement'),
-                    subtitle: Text('Type: ${t['type'] ?? '-'}'),
-                    onTap: () {
-                      Navigator.of(ctx).pop();
-                      _showRepairDialog(
-                        contrat: contrat,
-                        traitementId: t['traitement_id'] as int,
-                        traitementName: t['nom'] ?? 'Traitement',
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Annuler'),
-            ),
-          ],
-        ),
-      );
-    });
   }
 
   /// Afficher le formulaire de réparation avec prix
@@ -2937,7 +2882,6 @@ class _ContratCreationFlowScreenState
   /// Deuxième carte : Informations client (éditable selon la catégorie)
   Widget _buildClientInfoCard() {
     final isSociete = _clientCategorie.text == 'Société';
-    final isOrganisation = _clientCategorie.text == 'Organisation';
     final isParticulier = _clientCategorie.text == 'Particulier';
     final needsNifStat = isSociete;
 
@@ -4565,9 +4509,7 @@ class _ContratCreationFlowScreenState
                   montant = NumberFormatter.parseMontant(montantStr);
                   logger.i('✅ Montant parsé: $montant Ar');
                 } catch (e) {
-                  logger.e(
-                    '❌ Erreur parsing montant: $montantStr - $e',
-                  );
+                  logger.e('❌ Erreur parsing montant: $montantStr - $e');
                   montant = 0;
                 }
               } else {
@@ -4584,7 +4526,7 @@ class _ContratCreationFlowScreenState
                       mode:
                           null, // Mode à définir plus tard (pas de valeur par défaut)
                       etat: 'À venir',
-                      axe: clientAxe, 
+                      axe: clientAxe,
                       dateTraitement: date,
                     );
 
@@ -4783,7 +4725,6 @@ class _ContratCreationFlowScreenState
       }
 
       final treatmentName = treatmentFound.displayName;
-      final planning = _treatmentPlanning[treatmentId] ?? {};
       final facture = _treatmentFactures[treatmentId] ?? {};
       final nombrePlanifications = _calculateNumberOfPlannings(treatmentId);
 
