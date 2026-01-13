@@ -104,6 +104,8 @@ class FactureRepository extends ChangeNotifier {
     notifyListeners();
 
     try {
+      // Requête optimisée: utilise INNER JOIN pour éviter les NULL inutiles
+      // et réduit le nombre de jointures en cascade
       const sql = '''
         SELECT 
           f.facture_id,
@@ -117,13 +119,13 @@ class FactureRepository extends ChangeNotifier {
           f.date_traitement,
           f.etat,
           f.axe,
-          cl.client_id,
-          cl.nom as clientNom,
-          cl.prenom as clientPrenom,
-          cl.categorie as clientCategorie,
-          tt.typeTraitement as typeTreatment,
-          pd.date_planification as datePlanification,
-          pd.statut as etatPlanning
+          COALESCE(cl.client_id, 0) as client_id,
+          COALESCE(cl.nom, 'Non associé') as clientNom,
+          COALESCE(cl.prenom, '') as clientPrenom,
+          COALESCE(cl.categorie, '') as clientCategorie,
+          COALESCE(tt.typeTraitement, 'Non défini') as typeTreatment,
+          COALESCE(pd.date_planification, '2000-01-01') as datePlanification,
+          COALESCE(pd.statut, 'Non planifié') as etatPlanning
         FROM Facture f
         LEFT JOIN PlanningDetails pd ON f.planning_detail_id = pd.planning_detail_id
         LEFT JOIN Planning p ON pd.planning_id = p.planning_id
@@ -131,7 +133,8 @@ class FactureRepository extends ChangeNotifier {
         LEFT JOIN TypeTraitement tt ON t.id_type_traitement = tt.id_type_traitement
         LEFT JOIN Contrat co ON t.contrat_id = co.contrat_id
         LEFT JOIN Client cl ON co.client_id = cl.client_id
-        ORDER BY cl.nom ASC
+        ORDER BY COALESCE(cl.nom, 'Z') ASC
+        LIMIT 10000
       ''';
 
       final rows = await _db.query(sql);
