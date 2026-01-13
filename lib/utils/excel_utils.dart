@@ -308,9 +308,6 @@ class ExcelService {
     final String statusKey = isMonthly
         ? 'Etat paiement (Payée ou non)'
         : 'Etat de Paiement';
-    final String typeKey = isMonthly
-        ? 'Traitement (Type)'
-        : 'Type de Traitement';
 
     double total = data.fold(0, (prev, e) => prev + (e[amountKey] ?? 0));
     double paid = data

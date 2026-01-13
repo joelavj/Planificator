@@ -1,11 +1,11 @@
-import 'package:logger/logger.dart';
 import 'package:flutter/material.dart';
 import '../models/index.dart';
 import '../services/index.dart';
+import '../services/logging_service.dart';
 
 class ContratRepository extends ChangeNotifier {
   final DatabaseService _db = DatabaseService();
-  final logger = Logger();
+  final logger = createLoggerWithFileOutput(name: 'contrat_repository');
 
   List<Contrat> _contrats = [];
   Contrat? _currentContrat;
@@ -26,10 +26,11 @@ class ContratRepository extends ChangeNotifier {
     try {
       const sql = '''
         SELECT 
-          contrat_id, client_id, reference_contrat, date_contrat, date_debut, date_fin, 
-          statut_contrat, duree_contrat, duree, categorie
-        FROM Contrat
-        ORDER BY date_debut DESC
+          c.contrat_id, c.client_id, c.reference_contrat, c.date_contrat, c.date_debut, c.date_fin, 
+          c.statut_contrat, c.duree_contrat, c.duree, c.categorie
+        FROM Contrat c
+        JOIN Client cli ON c.client_id = cli.client_id
+        ORDER BY cli.nom ASC
       ''';
 
       final rows = await _db.query(sql);
@@ -265,7 +266,7 @@ class ContratRepository extends ChangeNotifier {
         FROM Contrat c
         JOIN Client cli ON c.client_id = cli.client_id
         WHERE cli.nom LIKE ? OR cli.prenom LIKE ?
-        ORDER BY c.date_debut DESC
+        ORDER BY cli.nom ASC
       ''';
 
       final searchTerm = '%$query%';

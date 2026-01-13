@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:logger/logger.dart';
 import '../../repositories/index.dart';
 import '../../models/index.dart';
 import '../../utils/excel_utils.dart';
 import '../../services/database_service.dart';
+import '../../services/logging_service.dart';
 
-final logger = Logger();
+final logger = createLoggerWithFileOutput(name: 'export_screen');
 
 class ExportScreen extends StatefulWidget {
   const ExportScreen({Key? key}) : super(key: key);
@@ -30,9 +30,6 @@ class _ExportScreenState extends State<ExportScreen> {
   // Options pour les dropdowns
   final List<String> _categories = ['Facture', 'Traitement'];
   List<String> _traitements = ['Tous'];
-  Map<String, String> _traitementMap = {
-    'Tous': 'Tous',
-  }; // Map affichage -> valeur DB
   final List<String> _mois = [
     'Tous',
     'Janvier',
@@ -136,7 +133,6 @@ class _ExportScreenState extends State<ExportScreen> {
       if (mounted) {
         setState(() {
           _traitements = treatments;
-          _traitementMap = traitementMap;
           _selectedTraitement = 'Tous';
           final clientName = clientId == -1
               ? 'tous les clients'

@@ -3,9 +3,9 @@ import 'package:intl/intl.dart';
 import 'package:Planificator/models/planning_details.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:provider/provider.dart';
-import 'package:logger/logger.dart';
 import '../../repositories/index.dart';
 import '../../core/theme.dart';
+import '../../services/logging_service.dart';
 import 'signalement_dialog.dart';
 import 'remark_dialog.dart';
 
@@ -53,8 +53,10 @@ class _PlanningScreenState extends State<PlanningScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     // Charger TOUS les traitements (passés, présents, futurs) pour le calendrier
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<PlanningDetailsRepository>().loadAllTreatmentsComplete();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await context
+          .read<PlanningDetailsRepository>()
+          .loadAllTreatmentsComplete();
     });
   }
 
@@ -103,8 +105,10 @@ class _PlanningScreenState extends State<PlanningScreen> {
     return Scaffold(
       floatingActionButton: FloatingActionButton(
         heroTag: 'planning_refresh',
-        onPressed: () {
-          context.read<PlanningDetailsRepository>().loadAllTreatmentsComplete();
+        onPressed: () async {
+          await context
+              .read<PlanningDetailsRepository>()
+              .loadAllTreatmentsComplete();
         },
         tooltip: 'Actualiser',
         child: const Icon(Icons.refresh),
@@ -435,7 +439,7 @@ class _PlanningDetailScreenState extends State<_PlanningDetailScreen> {
   }
 
   void _showRemarqueDialog() {
-    final logger = Logger();
+    final logger = createLoggerWithFileOutput(name: 'planning_screen');
 
     try {
       // Créer le PlanningDetails à partir du treatment map
@@ -555,7 +559,7 @@ class _PlanningDetailScreenState extends State<_PlanningDetailScreen> {
   }
 
   void _showSignalementDialog() {
-    final logger = Logger();
+    final logger = createLoggerWithFileOutput(name: 'planning_screen');
 
     try {
       // Créer le PlanningDetails à partir du treatment map

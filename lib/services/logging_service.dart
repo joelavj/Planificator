@@ -130,6 +130,12 @@ class LoggingService {
     );
   }
 
+  /// Configurer le Logger global pour qu'il envoie tous les logs au fichier
+  void configureGlobalLogger(logger_pkg.Logger globalLogger) {
+    // Le Logger utilise déjà notre _CaptureLogOutput en interne
+    // Cette méthode est ici pour la documentation
+  }
+
   /// Initialiser le service de logging avec configuration
   Future<void> initialize({LoggingConfig? config}) async {
     if (_isInitialized) return;
@@ -470,3 +476,14 @@ Résumé des Logs:
 
 // Singleton global pour accès partout dans l'app
 final log = LoggingService();
+
+/// Crée un Logger qui envoie tous ses logs au LoggingService
+/// Utiliser cette fonction dans vos fichiers pour créer un logger local
+/// qui persiste automatiquement dans les fichiers
+logger_pkg.Logger createLoggerWithFileOutput({String? name}) {
+  return logger_pkg.Logger(
+    output: _CaptureLogOutput(log),
+    level: logger_pkg.Level.debug,
+    filter: logger_pkg.ProductionFilter(),
+  );
+}

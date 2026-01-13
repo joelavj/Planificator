@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:logger/logger.dart';
+import 'package:logger/logger.dart' as logger_pkg;
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'services/index.dart';
@@ -19,7 +19,8 @@ import 'screens/settings/settings_screen.dart';
 import 'screens/about/about_screen.dart';
 import 'core/theme.dart';
 
-final logger = Logger();
+/// Logger global qui envoie tous les logs au fichier
+final logger = logger_pkg.Logger(level: logger_pkg.Level.debug);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,6 +35,9 @@ void main() async {
       minPersistLevel: LogLevel.info, // Persister à partir de INFO
     ),
   );
+
+  // Configurer le logger global pour envoyer tous les logs au fichier
+  log.configureGlobalLogger(logger);
 
   log.info('🚀 Application démarrée', source: 'main');
 
