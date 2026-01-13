@@ -25,6 +25,16 @@ class _PlanningScreenState extends State<PlanningScreen> {
     super.initState();
     _focusedDay = DateTime.now();
     _selectedDay = DateTime.now();
+
+    // Charger les données après le premier frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadData();
+    });
+  }
+
+  Future<void> _loadData() async {
+    // Charger TOUS les traitements (passés, présents, futurs) pour le calendrier
+    await context.read<PlanningDetailsRepository>().loadAllTreatmentsComplete();
   }
 
   /// Convertir une valeur dynamique en String
@@ -47,17 +57,6 @@ class _PlanningScreenState extends State<PlanningScreen> {
     }
 
     return value.toString();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Charger TOUS les traitements (passés, présents, futurs) pour le calendrier
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await context
-          .read<PlanningDetailsRepository>()
-          .loadAllTreatmentsComplete();
-    });
   }
 
   List<String> _getEventsMarkers(
@@ -167,18 +166,7 @@ class _PlanningScreenState extends State<PlanningScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      if (detailsRepository.isLoading)
-                        const Center(child: CircularProgressIndicator())
-                      else if (detailsRepository.errorMessage != null)
-                        Center(
-                          child: Text(
-                            'Erreur: ${detailsRepository.errorMessage}',
-                            style: const TextStyle(color: Colors.red),
-                          ),
-                        )
-                      else if (treatmentsForSelected.isEmpty)
-                        const Center(child: Text('Aucun traitement ce jour'))
-                      else
+                      if (treatmentsForSelected.isNotEmpty)
                         ListView.builder(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
@@ -201,7 +189,18 @@ class _PlanningScreenState extends State<PlanningScreen> {
                               },
                             );
                           },
-                        ),
+                        )
+                      else if (detailsRepository.isLoading)
+                        const Center(child: CircularProgressIndicator())
+                      else if (detailsRepository.errorMessage != null)
+                        Center(
+                          child: Text(
+                            'Erreur: ${detailsRepository.errorMessage}',
+                            style: const TextStyle(color: Colors.red),
+                          ),
+                        )
+                      else
+                        const Center(child: Text('Aucun traitement ce jour')),
                     ],
                   ),
                 ),
