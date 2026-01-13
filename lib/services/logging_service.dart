@@ -456,7 +456,8 @@ Résumé des Logs:
       return null;
     }
     try {
-      return await _currentLogFile!.readAsString();
+      // Lire avec UTF-8 pour Windows (évite les problèmes d'encodage)
+      return await _currentLogFile!.readAsString(encoding: const Utf8Codec());
     } catch (e) {
       return null;
     }
