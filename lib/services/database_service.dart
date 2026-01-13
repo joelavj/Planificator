@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:mysql1/mysql1.dart';
 import './logging_service.dart';
+import './database_isolate_service.dart';
 
 class DatabaseService {
   static final DatabaseService _instance = DatabaseService._internal();
@@ -8,6 +9,7 @@ class DatabaseService {
 
   late MySqlConnection _connection;
   bool _isConnected = false;
+  bool _useIsolates = true; // Nouvelle option pour utiliser les isolates
 
   // Configuration de la base de données (configurable)
   late String _host;
@@ -30,6 +32,12 @@ class DatabaseService {
   }
 
   bool get isConnected => _isConnected;
+
+  /// Active/désactive l'utilisation des isolates
+  void setUseIsolates(bool useIsolates) {
+    _useIsolates = useIsolates;
+    logger.i('Isolates ${useIsolates ? 'activés' : 'désactivés'}');
+  }
 
   /// Mettre à jour les paramètres de connexion
   void updateConnectionSettings({
@@ -104,6 +112,22 @@ class DatabaseService {
         logger.d('Params: $params');
       }
 
+      // Utiliser les isolates si activés (recommandé pour Windows)
+      if (_useIsolates) {
+        final rows = await DatabaseIsolateService.executeQuery(
+          sql,
+          params,
+          _host,
+          _port,
+          _user,
+          _password,
+          _database,
+        );
+        logger.i('Query réussie via isolate: ${rows.length} lignes retournées');
+        return rows;
+      }
+
+      // Sinon, utiliser la connexion existante
       Results results = await _connection
           .query(sql, params)
           .timeout(
@@ -145,6 +169,22 @@ class DatabaseService {
         logger.d('Params: $params');
       }
 
+      // Utiliser les isolates si activés
+      if (_useIsolates) {
+        await DatabaseIsolateService.executeUpdate(
+          sql,
+          params,
+          _host,
+          _port,
+          _user,
+          _password,
+          _database,
+        );
+        logger.i('Execution réussie via isolate');
+        return;
+      }
+
+      // Sinon, utiliser la connexion existante
       await _connection.query(sql, params);
       logger.i('Execution réussie');
     } catch (e) {
@@ -165,6 +205,22 @@ class DatabaseService {
         logger.d('Params: $params');
       }
 
+      // Utiliser les isolates si activés
+      if (_useIsolates) {
+        final id = await DatabaseIsolateService.executeInsert(
+          sql,
+          params,
+          _host,
+          _port,
+          _user,
+          _password,
+          _database,
+        );
+        logger.i('Insert réussi via isolate');
+        return id;
+      }
+
+      // Sinon, utiliser la connexion existante
       Results result = await _connection.query(sql, params);
       logger.i('Insert réussi');
       return result.insertId ?? 0;
